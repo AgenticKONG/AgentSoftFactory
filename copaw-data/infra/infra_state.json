@@ -1,17 +1,29 @@
 {
     "checkpoint": {
-        "id": "UNIFIED_MEMORY_ESTABLISHED",
-        "timestamp": "2026-03-07T17:15:00.000000",
-        "last_known_status": "Success: Gemini CLI & ASF Soul Unified."
+        "id": "INFRA_UI_RESTRUCTURED",
+        "timestamp": "2026-03-07T22:15:00.000000",
+        "last_known_status": "Success: Infra Center prioritized and sidebar unified."
     },
     "active_task": {
-        "name": "Establish Persistent Memory Bridge",
-        "goal": "Ensure terminal restarts do not cause memory loss by anchoring context in ASF storage.",
-        "progress": "100%: GEMINI.md created, SOUL.md unified, infra_state.json initialized."
+        "name": "Governance & UI Optimization",
+        "goal": "Establish the Infra Agent's sovereign entry point and persistent evolution ledger.",
+        "progress": "100%: Sidebar rebuilt, InfraCenter page deployed, Router connected."
     },
-    "next_strategic_steps": [
-        "Recover real-time project progress from Human Partner.",
-        "Verify dual-end synchronization (CLI vs CoPaw).",
-        "Proceed with ASF core architectural evolution."
+    "evolution_logs": [
+        {
+            "time": "21:55",
+            "action": "Sidebar Reorganization",
+            "correction": "Renamed 'PROJECT' to 'Project', unified 'Registry', and removed redundant 'New Project' entry."
+        },
+        {
+            "time": "22:05",
+            "action": "Infra Agent Sovereign Entry",
+            "correction": "Created 'Infra Center' page and established its C-position at the top of the Sidebar."
+        },
+        {
+            "time": "22:10",
+            "action": "API Bridge Extension",
+            "correction": "Added /api/asf/infra/info to connect UI with persistent Soul & State files."
+        }
     ]
 }

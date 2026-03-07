@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "copaw.app._app:app", 
         host="127.0.0.1", 
         port=8088, 
-        reload=True,
-        reload_dirs=["/Users/erickong/AgentSoftFactory/src/copaw"],
+        reload=False,  # Disabled for stability
         log_level="debug"
     )
+

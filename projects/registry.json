@@ -14,6 +14,11 @@
             "id": "004-data-cleaner",
             "name": "Data Cleaning Utility",
             "path": "/Users/erickong/AgentSoftFactory/projects/004-data-cleaner"
+        },
+        {
+            "id": "002-web-scraper",
+            "name": "Auto Web Scraper Test",
+            "path": "/Users/erickong/AgentSoftFactory/projects/002-web-scraper"
         }
     ]
 }

@@ -70,7 +70,7 @@ const Workstation = () => {
 
     const pollEvents = async () => {
       try {
-        const res = await fetch(`/api/push/take?session_id=${selectedProjectId}`);
+        const res = await fetch(`/api/asf/projects/${selectedProjectId}/events/take`);
         if (res.ok) {
           const events = await res.json();
           events.forEach((evt: any) => {

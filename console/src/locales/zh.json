@@ -35,7 +35,11 @@
     "agentConfig": "运行配置",
     "settings": "设置",
     "models": "模型",
-    "environments": "环境变量"
+    "environments": "环境变量",
+    "infra": "基础设施",
+    "project": "项目",
+    "registry": "注册处",
+    "workstation": "工作站"
   },
   "workspace": {
     "title": "工作区",

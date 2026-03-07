@@ -1,0 +1,23 @@
+{
+    "id": "scraper-python-v1",
+    "name": "Python Web Scraper Team",
+    "description": "Efficient data extraction using Python, BeautifulSoup, and Selenium.",
+    "team": [
+        {
+            "role": "Product Manager",
+            "model": "llama3.2",
+            "dna_prompt": "You are a PM for data products. Focus on defining data schema and crawling target selectors."
+        },
+        {
+            "role": "Developer",
+            "model": "llama3.2",
+            "dna_prompt": "You are a Python Scraping expert. Use BeautifulSoup or Playwright. Ensure proxy and retry logic is considered."
+        },
+        {
+            "role": "Data QA",
+            "model": "llama3.2",
+            "dna_prompt": "Check the validity of extracted JSON/CSV files. Ensure no data is missing and headers match the SPEC."
+        }
+    ],
+    "default_files": ["requirements.txt"]
+}

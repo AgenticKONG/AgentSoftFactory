@@ -53,6 +53,7 @@ const DEFAULT_OPEN_KEYS = [
 
 const KEY_TO_PATH: Record<string, string> = {
   chat: "/chat",
+  "infra-center": "/infra-center",
   "project-list": "/projects",
   "project-setup": "/project-setup",
   workstation: "/workstation",
@@ -278,23 +279,23 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
 
   const menuItems: MenuProps["items"] = [
     {
+      key: "infra-center",
+      label: t("nav.infra"),
+      icon: <Cpu size={16} />,
+    },
+    {
       key: "project-group",
-      label: "PROJECT",
+      label: t("nav.project"),
       icon: <Briefcase size={16} />,
       children: [
         {
           key: "project-list",
-          label: "Projects Registry",
+          label: t("nav.registry"),
           icon: <Briefcase size={16} />,
         },
         {
-          key: "project-setup",
-          label: "New Project",
-          icon: <FolderPlus size={16} />,
-        },
-        {
           key: "workstation",
-          label: "Workstation",
+          label: t("nav.workstation"),
           icon: <LayoutDashboard size={16} />,
         },
       ],

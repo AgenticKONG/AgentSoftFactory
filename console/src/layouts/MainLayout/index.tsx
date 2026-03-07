@@ -10,6 +10,7 @@ import Workstation from "../../pages/Workstation";
 import ProjectSetup from "../../pages/ProjectSetup";
 import ProjectDashboard from "../../pages/ProjectDashboard";
 import ProjectList from "../../pages/ProjectList";
+import InfraCenter from "../../pages/InfraCenter";
 import ChannelsPage from "../../pages/Control/Channels";
 import SessionsPage from "../../pages/Control/Sessions";
 import CronJobsPage from "../../pages/Control/CronJobs";
@@ -25,6 +26,7 @@ const { Content } = Layout;
 
 const pathToKey: Record<string, string> = {
   "/chat": "chat",
+  "/infra-center": "infra-center",
   "/projects": "project-list",
   "/workstation": "workstation",
   "/project-setup": "project-setup",
@@ -68,6 +70,7 @@ export default function MainLayout() {
           <div className="page-content">
             <Routes>
               <Route path="/chat" element={<Chat />} />
+              <Route path="/infra-center" element={<InfraCenter />} />
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/workstation" element={<Workstation />} />
               <Route path="/project-setup" element={<ProjectSetup />} />

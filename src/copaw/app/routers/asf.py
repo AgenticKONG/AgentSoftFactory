@@ -39,8 +39,63 @@ async def run_factory_task(project_id: str, briefing: str):
     factory = SoftwareFactory(project_id, manifest)
     await factory.run_mission(briefing)
 
+from ..event_store import asf_event_queue
+
+@router.get("/infra/info")
+async def get_infra_info():
+    """Returns the unified identity and state of the Infra Agent."""
+    soul_path = "/Users/erickong/AgentSoftFactory/copaw-data/SOUL.md"
+    state_path = "/Users/erickong/AgentSoftFactory/copaw-data/infra/infra_state.json"
+    
+    # Simple parser for SOUL.md
+    principles = []
+    identity = "Infra Agent"
+    if os.path.exists(soul_path):
+        with open(soul_path, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if "Identity:" in line: identity = line.split("Identity:")[-1].strip()
+                if line.strip().startswith("- **") or line.strip().startswith("1."):
+                    principles.append(line.strip())
+    
+    # Load state
+    state = {}
+    if os.path.exists(state_path):
+        with open(state_path, 'r') as f:
+            state = json.load(f)
+            
+    return {
+        "soul": {
+            "version": "1.0",
+            "identity": identity,
+            "principles": principles if principles else ["Safety", "Audit", "Evolution"]
+        },
+        "state": {
+            "last_checkpoint": state.get("checkpoint", {}).get("id", "UNKNOWN"),
+            "timestamp": state.get("checkpoint", {}).get("timestamp", "N/A"),
+            "current_task": state.get("active_task", {}).get("name", "Idle")
+        },
+        "evolution_logs": state.get("evolution_logs", [])
+    }
+
+
+@router.get("/projects/{project_id}/events/take")
+async def take_events(project_id: str):
+    """Pops all available events for the given project."""
+    if project_id not in asf_event_queue:
+        return []
+    events = asf_event_queue[project_id][:]
+    asf_event_queue[project_id] = []
+    return [{"text": e} for e in events]
+
+@router.get("/projects/templates")
+async def list_templates():
+    """Returns the list of available project blueprints."""
+    return mgr.list_templates()
+
 @router.post("/projects/init")
 async def init_project(req: ProjectInitRequest):
+
     try:
         mgr.init_project(req.project_id, req.name, req.description, req.template)
         return {"status": "success", "message": f"Project {req.name} initialized."}
@@ -82,6 +137,9 @@ async def update_project(project_id: str, req: ProjectUpdateRequest):
 
 @router.post("/projects/{project_id}/launch")
 async def launch_project(project_id: str, req: LaunchRequest, background_tasks: BackgroundTasks):
-    """Triggers the Agent factory loop."""
+    """Triggers the Agent factory loop in the background."""
+    print(f"--- 🚀 ASF FACTORY: BACKGROUND MISSION START [{project_id}] ---")
     background_tasks.add_task(run_factory_task, project_id, req.mission_briefing)
     return {"status": "success", "message": "Factory launched in background."}
+
+

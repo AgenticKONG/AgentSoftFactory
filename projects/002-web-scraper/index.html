@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hacker News Trending Items Scraper</title>
+    <style>
+        /* Add styles here */
+    </style>
+</head>
+<body>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // D3.js code to visualize the data
+        d3.json("projects/002-web-scraper/output/hn_trends.json", function(data) {
+            var margin = { top: 20, right: 20, bottom: 30, left: 40 };
+            var width = 500 - margin.left - margin.right;
+            var height = 300 - margin.top - margin.bottom;
+
+            var x = d3.scaleBand()
+                .domain(data.map(function(d) { return d.rank; }))
+                .range([0, width])
+                .padding(0.2);
+
+            var y = d3.scaleLinear()
+                .domain([0, d3.max(data, function(d) { return d.points; })])
+                .range([height, 0]);
+
+            var g = d3.select("body")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            g.selectAll("rect")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("x", function(d) { return x(d.rank); })
+                .attr("y", function(d) { return y(d.points); })
+                .attr("width", x.bandwidth())
+                .attr("height", function(d) { return y(d.points); });
+
+            g.append("text")
+                .attr("x", (width + margin.left) / 2)
+                .attr("y", margin.top + 5)
+                .attr("text-anchor", "middle")
+                .text("Rank");
+
+            g.append("text")
+                .attr("x", (width + margin.left) / 2)
+                .attr("y", height + margin.top + 5)
+                .attr("text-anchor", "middle")
+                .text("Points");
+        });
+    </script>
+</body>
+</html>

@@ -284,36 +284,29 @@ def _strip_top_level_message_name(
 def create_model_and_formatter(
     llm_cfg: Optional["ResolvedModelConfig"] = None,
 ) -> Tuple[ChatModelBase, FormatterBase]:
-    """Factory method to create model and formatter instances.
+    """Precisely instantiate Ollama model for AgentScope 1.x compatibility."""
+    config_path = "/Users/erickong/AgentSoftFactory/src/copaw/config/model_config.json"
+    with open(config_path, 'r') as f:
+        configs = json.load(f)
+    
+    # Target the llama3.2 config
+    target = next(c for c in configs if c.get("model_name") == "llama3.2")
+    
+    from agentscope.model import OllamaChatModel
+    # Simplified construction: NO STREAM, NO EXTRA OPTIONS
+    model = OllamaChatModel(
+        model_name=target["model_name"],
+        host=target["host"],
+        stream=False
+    )
 
-    This method handles both local and remote models, selecting the
-    appropriate chat model class and formatter based on configuration.
-
-    Args:
-        llm_cfg: Resolved model configuration. If None, will call
-            get_active_llm_config() to fetch the active configuration.
-
-    Returns:
-        Tuple of (model_instance, formatter_instance)
-
-    Example:
-        >>> model, formatter = create_model_and_formatter()
-        >>> # Use with custom config
-        >>> from copaw.providers import get_active_llm_config
-        >>> custom_cfg = get_active_llm_config()
-        >>> model, formatter = create_model_and_formatter(custom_cfg)
-    """
-    # Fetch config if not provided
-    if llm_cfg is None:
-        llm_cfg = get_active_llm_config()
-
-    # Create the model instance and determine chat model class
-    model, chat_model_class = _create_model_instance(llm_cfg)
-
-    # Create the formatter based on chat_model_class
-    formatter = _create_formatter_instance(chat_model_class)
-
+    
+    # Use standard OpenAI formatter
+    formatter = OpenAIChatFormatter()
+    
     return model, formatter
+
+
 
 
 def _create_model_instance(

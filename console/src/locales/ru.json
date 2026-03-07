@@ -35,7 +35,11 @@
     "agentConfig": "Конфигурация",
     "settings": "Настройки",
     "models": "Модели",
-    "environments": "Окружения"
+    "environments": "Окружения",
+    "infra": "Инфраструктура",
+    "project": "Проект",
+    "registry": "Реестр",
+    "workstation": "Воркстейшн"
   },
   "workspace": {
     "title": "Рабочее пространство",

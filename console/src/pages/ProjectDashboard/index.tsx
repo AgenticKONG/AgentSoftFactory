@@ -22,10 +22,12 @@ const ProjectDashboard = () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/asf/projects/${projectId}`);
+      if (!res.ok) throw new Error("Not found");
       const data = await res.json();
       setProject(data);
     } catch (err) {
       message.error("Failed to load project details.");
+      setProject(null);
     } finally {
       setLoading(false);
     }
@@ -71,6 +73,16 @@ const ProjectDashboard = () => {
   };
 
   if (loading) return <div style={{ padding: '100px', textAlign: 'center' }}><Spin size="large" /></div>;
+
+  if (!project) return (
+    <div style={{ padding: '100px', textAlign: 'center' }}>
+      <Title level={3}>Project Not Found</Title>
+      <Text>No manifest available for ID: {projectId}</Text>
+      <div style={{ marginTop: '20px' }}>
+        <Button onClick={() => navigate('/projects')}>Back to Projects</Button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: '24px' }}>

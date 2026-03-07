@@ -35,7 +35,11 @@
     "agentConfig": "Configuration",
     "settings": "Settings",
     "models": "Models",
-    "environments": "Environments"
+    "environments": "Environments",
+    "infra": "Infra Center",
+    "project": "Project",
+    "registry": "Registry",
+    "workstation": "Workstation"
   },
   "workspace": {
     "title": "WorkSpace",

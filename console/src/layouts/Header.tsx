@@ -14,14 +14,18 @@ const { Header: AntHeader } = Layout;
 
 // Navigation URLs
 const NAV_URLS = {
-  docs: "https://copaw.agentscope.io/docs/intro",
-  faq: "https://copaw.agentscope.io/docs/faq",
-  changelog: "https://github.com/agentscope-ai/CoPaw/releases",
-  github: "https://github.com/agentscope-ai/CoPaw",
+  docs: "",
+  faq: "",
+  changelog: "https://github.com/AgenticKONG/AgentSoftFactory/blob/main/CHANGELOG.md",
+  github: "https://github.com/AgenticKONG/AgentSoftFactory",
 } as const;
 
 const keyToLabel: Record<string, string> = {
   chat: "nav.chat",
+  "infra-center": "nav.infra",
+  "project-list": "nav.registry",
+  "project-setup": "nav.project",
+  workstation: "nav.workstation",
   channels: "nav.channels",
   sessions: "nav.sessions",
   "cron-jobs": "nav.cronJobs",
@@ -58,6 +62,7 @@ export default function Header({ selectedKey }: HeaderProps) {
             icon={<FileTextOutlined />}
             type="text"
             onClick={() => handleNavClick(NAV_URLS.changelog)}
+            disabled={!NAV_URLS.changelog}
           >
             {t("header.changelog")}
           </Button>
@@ -67,6 +72,7 @@ export default function Header({ selectedKey }: HeaderProps) {
             icon={<BookOutlined />}
             type="text"
             onClick={() => handleNavClick(NAV_URLS.docs)}
+            disabled={!NAV_URLS.docs}
           >
             {t("header.docs")}
           </Button>
@@ -76,6 +82,7 @@ export default function Header({ selectedKey }: HeaderProps) {
             icon={<QuestionCircleOutlined />}
             type="text"
             onClick={() => handleNavClick(NAV_URLS.faq)}
+            disabled={!NAV_URLS.faq}
           >
             {t("header.faq")}
           </Button>
@@ -85,6 +92,7 @@ export default function Header({ selectedKey }: HeaderProps) {
             icon={<GithubOutlined />}
             type="text"
             onClick={() => handleNavClick(NAV_URLS.github)}
+            disabled={!NAV_URLS.github}
           >
             {t("header.github")}
           </Button>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, Button, Card, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, Settings2 } from 'lucide-react';
@@ -7,7 +7,22 @@ const { Title, Paragraph } = Typography;
 
 const ProjectSetup = () => {
   const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch('/api/asf/projects/templates');
+      const data = await res.json();
+      setTemplates(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -47,7 +62,7 @@ const ProjectSetup = () => {
         <Form
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{ template: 'visualization-team-v1' }}
+          initialValues={{ template: 'viz-d3-v1' }}
         >
           <Form.Item
             label="Project ID (Slug)"
@@ -69,12 +84,19 @@ const ProjectSetup = () => {
             <Input.TextArea rows={3} placeholder="Describe the goal of this project..." />
           </Form.Item>
 
-          <Form.Item label="Team Template" name="template">
-            <Select options={[
-              { value: 'visualization-team-v1', label: 'Visualization Team (PM + DEV + QA)' },
-              { value: 'data-cleaning-v1', label: 'Data Cleaning Team (DataEngineer + QA)' },
-              { value: 'standard-v1', label: 'Standard Team (Basic 3-Agent Flow)' }
-            ]} />
+          <Form.Item label="Team Template" name="template" rules={[{ required: true }]}>
+            <Select 
+              placeholder="Select a gene template..."
+              options={templates.map(t => ({
+                value: t.id,
+                label: (
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{t.name}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>{t.description}</div>
+                  </div>
+                )
+              }))} 
+            />
           </Form.Item>
 
           <Form.Item style={{ marginTop: '40px' }}>

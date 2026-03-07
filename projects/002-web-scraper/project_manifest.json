@@ -1,0 +1,33 @@
+{
+    "project_id": "002-web-scraper",
+    "meta": {
+        "name": "Auto Web Scraper Test",
+        "description": "Test",
+        "created_at": "2026-03-07T22:23:15.232070",
+        "status": "active"
+    },
+    "team": {
+        "template_id": "scraper-python-v1",
+        "agents": [
+            {
+                "role": "Product Manager",
+                "model": "llama3.2",
+                "dna_prompt": "You are a PM for data products. Focus on defining data schema and crawling target selectors."
+            },
+            {
+                "role": "Developer",
+                "model": "llama3.2",
+                "dna_prompt": "You are a Python Scraping expert. Use BeautifulSoup or Playwright. Ensure proxy and retry logic is considered."
+            },
+            {
+                "role": "Data QA",
+                "model": "llama3.2",
+                "dna_prompt": "Check the validity of extracted JSON/CSV files. Ensure no data is missing and headers match the SPEC."
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0
+    }
+}
