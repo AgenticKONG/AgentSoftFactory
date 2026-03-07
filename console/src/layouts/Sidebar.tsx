@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
+  FolderPlus,
+  LayoutDashboard,
   MessageSquare,
   Radio,
   Zap,
@@ -42,6 +44,7 @@ const { Sider } = Layout;
 const PYPI_URL = "https://pypi.org/pypi/copaw/json";
 
 const DEFAULT_OPEN_KEYS = [
+  "project-group",
   "chat-group",
   "control-group",
   "agent-group",
@@ -50,6 +53,9 @@ const DEFAULT_OPEN_KEYS = [
 
 const KEY_TO_PATH: Record<string, string> = {
   chat: "/chat",
+  "project-list": "/projects",
+  "project-setup": "/project-setup",
+  workstation: "/workstation",
   channels: "/channels",
   sessions: "/sessions",
   "cron-jobs": "/cron-jobs",
@@ -271,6 +277,28 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
   };
 
   const menuItems: MenuProps["items"] = [
+    {
+      key: "project-group",
+      label: "PROJECT",
+      icon: <Briefcase size={16} />,
+      children: [
+        {
+          key: "project-list",
+          label: "Projects Registry",
+          icon: <Briefcase size={16} />,
+        },
+        {
+          key: "project-setup",
+          label: "New Project",
+          icon: <FolderPlus size={16} />,
+        },
+        {
+          key: "workstation",
+          label: "Workstation",
+          icon: <LayoutDashboard size={16} />,
+        },
+      ],
+    },
     {
       key: "chat-group",
       label: t("nav.chat"),

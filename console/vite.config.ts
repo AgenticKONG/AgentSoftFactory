@@ -4,7 +4,6 @@ import path from "path";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  // Empty = same-origin; frontend and backend served together, no hardcoded host.
   const apiBaseUrl = env.BASE_URL ?? "";
 
   return {
@@ -32,16 +31,16 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: "0.0.0.0",
-      port: 5173,
+      port: 5174,
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8088",
+          changeOrigin: true,
+        },
+      },
     },
     optimizeDeps: {
       include: ["diff"],
     },
-    // build: {
-    //   // Output to CoPaw's console directory,
-    //   // so we don't need to copy files manually after build.
-    //   outDir: path.resolve(__dirname, "../src/copaw/console"),
-    //   emptyOutDir: true,
-    // },
   };
 });

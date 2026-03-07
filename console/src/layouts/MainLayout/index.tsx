@@ -1,11 +1,15 @@
 import { Layout } from "antd";
 import { useEffect } from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate, matchPath } from "react-router-dom";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
 import ConsoleCronBubble from "../../components/ConsoleCronBubble";
 import styles from "../index.module.less";
 import Chat from "../../pages/Chat";
+import Workstation from "../../pages/Workstation";
+import ProjectSetup from "../../pages/ProjectSetup";
+import ProjectDashboard from "../../pages/ProjectDashboard";
+import ProjectList from "../../pages/ProjectList";
 import ChannelsPage from "../../pages/Control/Channels";
 import SessionsPage from "../../pages/Control/Sessions";
 import CronJobsPage from "../../pages/Control/CronJobs";
@@ -21,6 +25,9 @@ const { Content } = Layout;
 
 const pathToKey: Record<string, string> = {
   "/chat": "chat",
+  "/projects": "project-list",
+  "/workstation": "workstation",
+  "/project-setup": "project-setup",
   "/channels": "channels",
   "/sessions": "sessions",
   "/cron-jobs": "cron-jobs",
@@ -38,11 +45,16 @@ export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
-  const selectedKey = pathToKey[currentPath] || "chat";
+  
+  // Enhanced key matching for dynamic routes
+  let selectedKey = pathToKey[currentPath] || "chat";
+  if (matchPath("/projects/:id", currentPath)) {
+    selectedKey = "project-list";
+  }
 
   useEffect(() => {
     if (currentPath === "/") {
-      navigate("/chat", { replace: true });
+      navigate("/projects", { replace: true });
     }
   }, [currentPath, navigate]);
 
@@ -56,6 +68,10 @@ export default function MainLayout() {
           <div className="page-content">
             <Routes>
               <Route path="/chat" element={<Chat />} />
+              <Route path="/projects" element={<ProjectList />} />
+              <Route path="/workstation" element={<Workstation />} />
+              <Route path="/project-setup" element={<ProjectSetup />} />
+              <Route path="/projects/:projectId" element={<ProjectDashboard />} />
               <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/sessions" element={<SessionsPage />} />
               <Route path="/cron-jobs" element={<CronJobsPage />} />
@@ -66,7 +82,7 @@ export default function MainLayout() {
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/environments" element={<EnvironmentsPage />} />
               <Route path="/agent-config" element={<AgentConfigPage />} />
-              <Route path="/" element={<Chat />} />
+              <Route path="/" element={<ProjectList />} />
             </Routes>
           </div>
         </Content>

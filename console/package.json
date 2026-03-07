@@ -24,12 +24,14 @@
     "antd": "^5.29.1",
     "antd-style": "^3.7.1",
     "i18next": "^25.8.4",
+    "lodash": "^4.17.23",
     "lucide-react": "^0.562.0",
     "react": "^18",
     "react-dom": "^18",
     "react-i18next": "^16.5.4",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
+    "reactflow": "^11.11.4",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
