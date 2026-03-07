@@ -83,6 +83,7 @@ logs/
 openspec
 /AGENTS.md
 CLAUDE.md
+GEMINI.md
 *.tmp
 \n# ASF Infra Agent Boot Protocol\nGEMINI.md
 ASF_ENGINEERING_LOG.md
