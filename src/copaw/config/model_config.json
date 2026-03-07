@@ -1,0 +1,19 @@
+[
+  {
+    "config_name": "ollama_llama3_2",
+    "model_type": "ollama_chat",
+    "model_name": "llama3.2",
+    "host": "http://localhost:11434",
+    "keep_alive": "5m",
+    "options": {
+      "temperature": 0.2,
+      "num_ctx": 4096
+    }
+  },
+  {
+    "config_name": "ollama_embedding",
+    "model_type": "ollama_embedding",
+    "model_name": "llama3.2",
+    "host": "http://localhost:11434"
+  }
+]
