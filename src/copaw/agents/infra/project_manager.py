@@ -14,7 +14,7 @@ class ASFProjectManager:
         self.root_dir = root_dir
         self.projects_dir = os.path.join(self.root_dir, "projects")
         self.templates_dir = os.path.join(self.root_dir, "copaw-data", "templates")
-        self.registry_path = os.path.join(self.root_dir, "data", "registry.json")
+        self.registry_path = os.path.join(self.projects_dir, "registry.json")
         
         if not os.path.exists(self.projects_dir): os.makedirs(self.projects_dir)
         if not os.path.exists(self.templates_dir): os.makedirs(self.templates_dir)
