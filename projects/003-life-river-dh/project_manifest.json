@@ -1,0 +1,41 @@
+{
+    "project_id": "003-life-river-dh",
+    "meta": {
+        "name": "LifeRiver Component for DH",
+        "description": "The 1st ASF \"PROJECT\"",
+        "created_at": "2026-03-07T15:11:13.956978",
+        "status": "active"
+    },
+    "team": {
+        "template": "visualization-team-v1",
+        "agents": [
+            {
+                "role": "PM",
+                "skills": [
+                    "file_reader",
+                    "spec_gen"
+                ]
+            },
+            {
+                "role": "DEV",
+                "skills": [
+                    "file_io",
+                    "code_exec",
+                    "browser"
+                ]
+            },
+            {
+                "role": "QA",
+                "skills": [
+                    "playwright",
+                    "linter"
+                ]
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0,
+        "avg_debug_cycles": 0
+    }
+}

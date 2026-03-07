@@ -1,0 +1,33 @@
+{
+    "version": "1.0",
+    "last_updated": "2026-03-07T09:19:50.593231",
+    "principles": {
+        "logic_isolation": {
+            "scope": "/Users/erickong/AgentSoftFactory",
+            "cross_border_approval": true,
+            "forbidden_paths": [
+                "~/.ssh",
+                "~/.gnupg",
+                "~/Documents"
+            ]
+        },
+        "environment_safety": {
+            "impact_report_required": true,
+            "explicit_confirmation_required": true
+        },
+        "destructive_actions": {
+            "silent_rm_forbidden": true,
+            "buffer_trash_dir": ".trash"
+        },
+        "audit": {
+            "host_audit_log": "host_audit.log",
+            "traceability": true
+        },
+        "secrets": {
+            "forbidden_persistence": [
+                "API_KEY",
+                "TOKEN"
+            ]
+        }
+    }
+}

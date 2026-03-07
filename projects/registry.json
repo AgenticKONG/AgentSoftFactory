@@ -1,0 +1,19 @@
+{
+    "projects": [
+        {
+            "id": "001-d3-gdp-viz",
+            "name": "GDP Visualization MVP",
+            "path": "/Users/erickong/AgentSoftFactory/projects/001-d3-gdp-viz"
+        },
+        {
+            "id": "003-life-river-dh",
+            "name": "LifeRiver Component for DH",
+            "path": "/Users/erickong/AgentSoftFactory/projects/003-life-river-dh"
+        },
+        {
+            "id": "004-data-cleaner",
+            "name": "Data Cleaning Utility",
+            "path": "/Users/erickong/AgentSoftFactory/projects/004-data-cleaner"
+        }
+    ]
+}
