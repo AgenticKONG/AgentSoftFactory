@@ -26,6 +26,7 @@ class PromptConfig:
     FILE_ORDER = [
         ("AGENTS.md", True),
         ("SOUL.md", True),
+        ("infra/CONSCIOUSNESS_BRIDGE.md", False), # Added for CLI-ASF sync
         ("PROFILE.md", False),
     ]
 

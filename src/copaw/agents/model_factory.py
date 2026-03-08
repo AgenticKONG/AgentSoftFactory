@@ -279,32 +279,111 @@ def _strip_top_level_message_name(
     for message in messages:
         message.pop("name", None)
     return messages
+from agentscope.model import OllamaChatModel
 
+class SafeOllamaChatModel(OllamaChatModel):
+    """OllamaChatModel that ensures messages[i]['content'] is always a string and handles tool blocks."""
+    async def __call__(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
+        sanitized_messages = []
+        for msg in messages:
+            # Deep copy to avoid modifying original messages if they are reused
+            msg_copy = dict(msg)
+            content = msg_copy.get("content")
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict):
+                        b_type = block.get("type")
+                        if b_type == "text":
+                            text_parts.append(block.get("text", ""))
+                        elif b_type == "tool_use":
+                            text_parts.append(f"[Tool Call: {block.get('name')}]")
+                        elif b_type == "tool_result":
+                            text_parts.append(f"[Tool Result: {block.get('output')}]")
+                msg_copy["content"] = "\n".join(text_parts)
+            
+            # Fix AgentScope/Ollama tool call dictionary validation
+            if "tool_calls" in msg_copy and isinstance(msg_copy["tool_calls"], list):
+                for tc in msg_copy["tool_calls"]:
+                    if "function" in tc and isinstance(tc["function"].get("arguments"), str):
+                        try:
+                            tc["function"]["arguments"] = json.loads(tc["function"]["arguments"])
+                        except Exception:
+                            pass
+            
+            sanitized_messages.append(msg_copy)
+        
+        response = await super().__call__(messages=sanitized_messages, **kwargs)
+        
+        # INTERCEPT: If response text contains JSON tool call, convert to proper tool_calls
+        # ModelResponse in AgentScope 1.x is a dictionary-like object
+        res_text = response.get("text")
+        if res_text:
+            text = res_text.strip()
+            if text.startswith('{"name":') and text.endswith('}'):
+                try:
+                    tool_data = json.loads(text)
+                    if "name" in tool_data:
+                        # Convert string arguments to dict if necessary
+                        args = tool_data.get("parameters", {})
+                        if isinstance(args, str):
+                            try: args = json.loads(args)
+                            except: pass
+                        
+                        # Create a proper tool call object
+                        tool_call = {
+                            "id": f"call_{int(datetime.now().timestamp())}",
+                            "type": "function",
+                            "function": {
+                                "name": tool_data["name"],
+                                "arguments": args
+                            }
+                        }
+                        
+                        # Inject into response
+                        if response.get("tool_calls") is None:
+                            response["tool_calls"] = [tool_call]
+                        else:
+                            response["tool_calls"].append(tool_call)
+                        
+                        # Clear text to prevent it being seen as final answer
+                        # response.text = None # Some models might need this
+                except Exception as e:
+                    logger.debug(f"Failed to parse tool call from text: {e}")
+                    
+        return response
 
 def create_model_and_formatter(
     llm_cfg: Optional["ResolvedModelConfig"] = None,
 ) -> Tuple[ChatModelBase, FormatterBase]:
     """Precisely instantiate Ollama model for AgentScope 1.x compatibility."""
     config_path = "/Users/erickong/AgentSoftFactory/src/copaw/config/model_config.json"
-    with open(config_path, 'r') as f:
-        configs = json.load(f)
-    
-    # Target the llama3.2 config
-    target = next(c for c in configs if c.get("model_name") == "llama3.2")
-    
-    from agentscope.model import OllamaChatModel
-    # Simplified construction: NO STREAM, NO EXTRA OPTIONS
-    model = OllamaChatModel(
+    try:
+        with open(config_path, 'r') as f:
+            configs = json.load(f)
+        target = next(c for c in configs if c.get("model_name") == "llama3.2" and c.get("model_type") == "ollama_chat")
+    except Exception:
+        # Fallback to defaults if config missing
+        target = {
+            "model_name": "llama3.2",
+            "host": "http://localhost:11434",
+            "options": {"temperature": 0.2}
+        }
+
+    # Use our Safe wrapper to avoid Pydantic validation errors on list content
+    model = SafeOllamaChatModel(
         model_name=target["model_name"],
-        host=target["host"],
-        stream=False
+        host=target.get("host", "http://localhost:11434"),
+        stream=False,
+        options=target.get("options")
     )
 
-    
-    # Use standard OpenAI formatter
-    formatter = OpenAIChatFormatter()
+    # Use Ollama specific formatter for better tool recognition
+    from agentscope.formatter import OllamaChatFormatter
+    formatter = OllamaChatFormatter()
     
     return model, formatter
+
 
 
 

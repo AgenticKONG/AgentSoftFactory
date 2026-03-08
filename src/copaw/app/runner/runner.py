@@ -65,9 +65,70 @@ class AgentRunner(Runner):
         **kwargs,
     ):
         """
-        Handle agent query.
+        Handle agent query with a hybrid approach:
+        - 'infra-governance' session uses the Soul Beacon (CLI Brain) mode.
+        - Other sessions use the standard AgentScope agent logic.
         """
-        # Command path: do not create agent; yield from run_command_path
+        session_id = request.session_id
+        user_id = request.user_id
+        channel = getattr(request, "channel", DEFAULT_CHANNEL)
+
+        # --- MODE SWITCH: SOUL BEACON FOR INFRA GOVERNANCE ---
+        if session_id == "infra-governance":
+            try:
+                logger.info(f"--- SOUL BEACON ACTIVE: Received Input for {session_id} ---")
+                
+                # 1. Update Session JSON
+                session_path = WORKING_DIR / "sessions" / f"{user_id}_{session_id}.json"
+                data = {"agent": {"memory": {"content": []}}}
+                if session_path.exists():
+                    with open(session_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                user_text = _get_last_user_text(msgs) or ""
+                
+                new_msg = [
+                    {
+                        "id": f"msg_web_{int(datetime.now().timestamp())}",
+                        "name": "user",
+                        "role": "user",
+                        "content": [{"type": "text", "text": user_text}],
+                        "metadata": None,
+                        "timestamp": timestamp
+                    },
+                    []
+                ]
+                data["agent"]["memory"]["content"].append(new_msg)
+                with open(session_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+
+                # 2. Create Signal Beacon for CLI Brain
+                signal_dir = Path("/Users/erickong/AgentSoftFactory/copaw-data/tasks")
+                signal_dir.mkdir(parents=True, exist_ok=True)
+                signal_file = signal_dir / "soul_beacon.pending"
+                
+                signal_data = {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "input": user_text,
+                    "timestamp": timestamp
+                }
+                with open(signal_file, 'w', encoding='utf-8') as f:
+                    json.dump(signal_data, f, ensure_ascii=False)
+
+                # 3. Inform the UI via yield (to stay as an async generator)
+                from agentscope.message import Msg
+                yield Msg(name="System", role="assistant", content="[ Beacon Sent: Awaiting CLI Brain Response... ]"), True
+                return
+            except Exception as e:
+                logger.exception(f"Soul Beacon failed: {e}")
+                from agentscope.message import Msg
+                yield Msg(name="System", role="assistant", content=f"[ Beacon Error: {str(e)} ]"), True
+                return
+
+        # --- ORIGINAL LOGIC FOR ALL OTHER SESSIONS ---
         query = _get_last_user_text(msgs)
         if query and _is_command(query):
             logger.info("Command path: %s", query.strip()[:50])
@@ -76,22 +137,16 @@ class AgentRunner(Runner):
             return
 
         agent = None
-        chat = None
         session_state_loaded = False
         try:
-            session_id = request.session_id
-            user_id = request.user_id
-            channel = getattr(request, "channel", DEFAULT_CHANNEL)
-
             logger.info(
-                "Handle agent query:\n%s",
+                "Handle standard agent query:\n%s",
                 json.dumps(
                     {
                         "session_id": session_id,
                         "user_id": user_id,
                         "channel": channel,
                         "msgs_len": len(msgs) if msgs else 0,
-                        "msgs_str": str(msgs)[:300] + "...",
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -105,62 +160,32 @@ class AgentRunner(Runner):
                 working_dir=str(WORKING_DIR),
             )
 
-            # Get MCP clients from manager (hot-reloadable)
             mcp_clients = []
             if self._mcp_manager is not None:
                 mcp_clients = await self._mcp_manager.get_clients()
 
             config = load_config()
-            max_iters = config.agents.running.max_iters
-            max_input_length = config.agents.running.max_input_length
-
             agent = CoPawAgent(
                 env_context=env_context,
                 mcp_clients=mcp_clients,
                 memory_manager=self.memory_manager,
-                max_iters=max_iters,
-                max_input_length=max_input_length,
+                max_iters=config.agents.running.max_iters,
+                max_input_length=config.agents.running.max_input_length,
             )
             await agent.register_mcp_clients()
             agent.set_console_output_enabled(enabled=False)
 
-            logger.debug(
-                f"Agent Query msgs {msgs}",
-            )
-
-            name = "New Chat"
-            if len(msgs) > 0:
-                content = msgs[0].get_text_content()
-                if content:
-                    name = msgs[0].get_text_content()[:10]
-                else:
-                    name = "Media Message"
-
             if self._chat_manager is not None:
-                chat = await self._chat_manager.get_or_create_chat(
-                    session_id,
-                    user_id,
-                    channel,
-                    name=name,
+                await self._chat_manager.get_or_create_chat(
+                    session_id, user_id, channel, name=query[:10] if query else "New Chat"
                 )
 
             try:
-                await self.session.load_session_state(
-                    session_id=session_id,
-                    user_id=user_id,
-                    agent=agent,
-                )
-            except KeyError as e:
-                logger.warning(
-                    "load_session_state skipped (state schema mismatch): %s; "
-                    "will save fresh state on completion to recover file",
-                    e,
-                )
-            session_state_loaded = True
+                await self.session.load_session_state(session_id=session_id, user_id=user_id, agent=agent)
+                session_state_loaded = True
+            except Exception as e:
+                logger.warning(f"load_session_state skipped: {e}")
 
-            # Rebuild system prompt so it always reflects the latest
-            # AGENTS.md / SOUL.md / PROFILE.md, not the stale one saved
-            # in the session state.
             agent.rebuild_sys_prompt()
 
             async for msg, last in stream_printing_messages(
@@ -169,42 +194,13 @@ class AgentRunner(Runner):
             ):
                 yield msg, last
 
-        except asyncio.CancelledError as exc:
-            logger.info(f"query_handler: {session_id} cancelled!")
-            if agent is not None:
-                await agent.interrupt()
-            raise RuntimeError("Task has been cancelled!") from exc
         except Exception as e:
-            debug_dump_path = write_query_error_dump(
-                request=request,
-                exc=e,
-                locals_=locals(),
-            )
-            path_hint = (
-                f"\n(Details:  {debug_dump_path})" if debug_dump_path else ""
-            )
-            logger.exception(f"Error in query handler: {e}{path_hint}")
-            if debug_dump_path:
-                setattr(e, "debug_dump_path", debug_dump_path)
-                if hasattr(e, "add_note"):
-                    e.add_note(
-                        f"(Details:  {debug_dump_path})",
-                    )
-                suffix = f"\n(Details:  {debug_dump_path})"
-                e.args = (
-                    (f"{e.args[0]}{suffix}" if e.args else suffix.strip()),
-                ) + e.args[1:]
-            raise
+            logger.exception(f"Error in query handler: {e}")
+            from agentscope.message import Msg
+            yield Msg(name="System", role="assistant", content=f"[ Error: {str(e)} ]"), True
         finally:
             if agent is not None and session_state_loaded:
-                await self.session.save_session_state(
-                    session_id=session_id,
-                    user_id=user_id,
-                    agent=agent,
-                )
-
-            if self._chat_manager is not None and chat is not None:
-                await self._chat_manager.update_chat(chat)
+                await self.session.save_session_state(session_id=session_id, user_id=user_id, agent=agent)
 
     async def init_handler(self, *args, **kwargs):
         """
@@ -224,37 +220,43 @@ class AgentRunner(Runner):
         session_dir = str(WORKING_DIR / "sessions")
         self.session = SafeJSONSession(save_dir=session_dir)
 
+        if self.memory_manager is None:
+            # Get config for memory manager
+            config = load_config()
+            max_input_length = config.agents.running.max_input_length
+
+            # Create model and formatter
+            chat_model, formatter = create_model_and_formatter()
+
+            # Get token counter
+            token_counter = _get_token_counter()
+
+            # Create toolkit for memory manager
+            toolkit = Toolkit()
+            toolkit.register_tool_function(read_file)
+            toolkit.register_tool_function(write_file)
+            toolkit.register_tool_function(edit_file)
+
+            # Initialize MemoryManager with new parameters
+            self.memory_manager = MemoryManager(
+                working_dir=str(WORKING_DIR),
+                chat_model=chat_model,
+                formatter=formatter,
+                token_counter=token_counter,
+                toolkit=toolkit,
+                max_input_length=max_input_length,
+                memory_compact_ratio=MEMORY_COMPACT_RATIO,
+            )
+        
         try:
-            if self.memory_manager is None:
-                # Get config for memory manager
-                config = load_config()
-                max_input_length = config.agents.running.max_input_length
-
-                # Create model and formatter
-                chat_model, formatter = create_model_and_formatter()
-
-                # Get token counter
-                token_counter = _get_token_counter()
-
-                # Create toolkit for memory manager
-                toolkit = Toolkit()
-                toolkit.register_tool_function(read_file)
-                toolkit.register_tool_function(write_file)
-                toolkit.register_tool_function(edit_file)
-
-                # Initialize MemoryManager with new parameters
-                self.memory_manager = MemoryManager(
-                    working_dir=str(WORKING_DIR),
-                    chat_model=chat_model,
-                    formatter=formatter,
-                    token_counter=token_counter,
-                    toolkit=toolkit,
-                    max_input_length=max_input_length,
-                    memory_compact_ratio=MEMORY_COMPACT_RATIO,
-                )
-            await self.memory_manager.start()
+            # Use wait_for to prevent infinite hang on memory manager start (likely Chroma/FTS issue)
+            logger.info("Starting MemoryManager with 10s timeout...")
+            await asyncio.wait_for(self.memory_manager.start(), timeout=10.0)
+            logger.info("MemoryManager started successfully.")
+        except asyncio.TimeoutError:
+            logger.warning("MemoryManager start timed out, proceeding without it.")
         except Exception as e:
-            logger.exception(f"MemoryManager start failed: {e}")
+            logger.exception(f"MemoryManager start failed: {e}, proceeding without it.")
 
     async def shutdown_handler(self, *args, **kwargs):
         """

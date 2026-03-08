@@ -14,12 +14,9 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  FolderPlus,
   LayoutDashboard,
-  MessageSquare,
   Radio,
   Zap,
-  MessageCircle,
   Wifi,
   UsersRound,
   CalendarClock,
@@ -297,18 +294,6 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           key: "workstation",
           label: t("nav.workstation"),
           icon: <LayoutDashboard size={16} />,
-        },
-      ],
-    },
-    {
-      key: "chat-group",
-      label: t("nav.chat"),
-      icon: <MessageSquare size={16} />,
-      children: [
-        {
-          key: "chat",
-          label: t("nav.chat"),
-          icon: <MessageCircle size={16} />,
         },
       ],
     },

@@ -19,6 +19,16 @@
             "id": "002-web-scraper",
             "name": "Auto Web Scraper Test",
             "path": "/Users/erickong/AgentSoftFactory/projects/002-web-scraper"
+        },
+        {
+            "id": "baseline-001-scraper",
+            "name": "Auto Scraper Base",
+            "path": "/Users/erickong/AgentSoftFactory/projects/baseline-001-scraper"
+        },
+        {
+            "id": "baseline-002-viz",
+            "name": "Auto D3 Viz Base",
+            "path": "/Users/erickong/AgentSoftFactory/projects/baseline-002-viz"
         }
     ]
 }

@@ -14,7 +14,11 @@ export function useCronJobs() {
     try {
       const data = await api.listCronJobs();
       if (data) {
-        setJobs(data as CronJob[]);
+        // Filter out infra jobs from general business list
+        const businessJobs = (data as CronJob[]).filter(
+          (job) => job.meta?.category !== "infra"
+        );
+        setJobs(businessJobs);
       }
     } catch (error) {
       console.error("Failed to load cron jobs", error);

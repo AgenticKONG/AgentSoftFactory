@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>News Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container"></div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // Function to scrape top 10 news from news.ycombinator.com
+        function scrapeNews() {
+            const axiosInstance = axios.create();
+            axiosInstance.get('https://news.ycombinator.com/')
+                .then(response => {
+                    const newsData = response.data;
+                    return newsData;
+                })
+                .then(data => {
+                    const top10News = data.slice(0, 10);
+                    return top10News;
+                })
+                .then(top10News => {
+                    return JSON.stringify(top10News);
+                })
+                .then(jsonData => {
+                    const container = document.getElementById('container');
+                    const svg = d3.select(container)
+                        .append('svg')
+                        .attr('width', 800)
+                        .attr('height', 600);
+                    const tooltip = d3.select(container)
+                        .append('div')
+                        .attr('class', 'tooltip');
+                    const tooltipText = d3.select(tooltip)
+                        .append('p');
+                    const margin = { top: 20, right: 20, bottom: 30, left: 20 };
+                    const width = 800 - margin.left - margin.right;
+                    const height = 550 - margin.top - margin.bottom;
+                    const xScale = d3.scaleBand()
+                        .domain(top10News.map((news, i) => i))
+                        .range([0, width])
+                        .padding(0.2);
+                    const yScale = d3.scaleLinear()
+                        .domain([0, 10])
+                        .range([height, 0]);
+                    const line = d3.line()
+                        .x((d, i) => xScale(i) + 100)
+                        .y(d => yScale(d.score));
+                    svg.selectAll('circle')
+                        .data(top10News)
+                        .enter()
+                        .append('circle')
+                        .attr('cx', (d, i) => xScale(i) + 50)
+                        .attr('cy', d => yScale(d.score))
+                        .attr('r', 20)
+                        .attr('fill', 'blue');
+                    svg.selectAll('text')
+                        .data(top10News)
+                        .enter()
+                        .append('text')
+                        .text(d => d.title)
+                        .attr('x', (d, i) => xScale(i) + 100)
+                        .attr('y', d => yScale(d.score) + 20)
+                        .attr('dy', '.75em');
+                    svg.selectAll('line')
+                        .data(top10News)
+                        .enter()
+                        .append('line')
+                        .attr('x1', (d, i) => xScale(i) + 50)
+                        .attr('y1', d => yScale(d.score))
+                        .attr('x2', (d, i) => xScale(i) + 150)
+                        .attr('y2', d => yScale(d.score));
+                    svg.selectAll('text')
+                        .data(top10News)
+                        .enter()
+                        .append('text')
+                        .attr('class', 'tooltip-text')
+                        .text(d => d.title)
+                        .attr('x', (d, i) => xScale(i) + 100)
+                        .attr('y', d => yScale(d.score) + 20)
+                        .attr('dy', '.75em');
+                    svg.append('rect')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'black')
+                        .attr('stroke-width', 1);
+                    svg.append('g')
+                        .attr('class', 'axis bottom')
+                        .attr('transform', `translate(0, ${height})`)
+                        .call(d3.axisBottom(xScale));
+                    svg.append('g')
+                        .attr('class', 'axis left')
+                        .call(d3.axisLeft(yScale));
+                    svg.append('text')
+                        .attr('class', 'axis-title')
+                        .text('Score')
+                        .attr('x', 20)
+                        .attr('y', 20)
+                        .attr('dy', '.75em');
+                    svg.append('text')
+                        .attr('class', 'axis-title')
+                        .text('News')
+                        .attr('x', width - 20)
+                        .attr('y', 20)
+                        .attr('dy', '.75em');
+                    svg.append('g')
+                        .attr('class', 'axis right')
+                        .attr('transform', `translate(${width}, 0)`)
+                        .call(d3.axisBottom(xScale));
+                    svg.append('g')
+                        .attr('class', 'axis top')
+                        .attr('transform', 'rotate(-90)')
+                        .call(d3.axisTop(yScale));
+                    svg.append('text')
+                        .attr('class', 'axis-title')
+                        .text('News')
+                        .attr('x', 20)
+                        .attr('y', 25)
+                        .attr('dy', '.75em');
+                    svg.append('text')
+                        .attr('class', 'axis-title')
+                        .text('Score')
+                        .attr('x', width - 20)
+                        .attr('y', 25)
+                        .attr('dy', '.75em');
+                    svg.append('text')
+                        .attr('class', 'tooltip-tip')
+                        .text('News Title')
+                        .attr('x', 100)
+                        .attr('y', 40)
+                        .attr('dy', '.75em');
+                    svg.append('text')
+                        .attr('class', 'tooltip-tip')
+                        .text('Score')
+                        .attr('x', 100)
+                        .attr('y', 60)
+                        .attr('dy', '.75em');
+                });
+        }
+
+        // Call the scrapeNews function
+        scrapeNews();
+    </script>
+</body>
+</html>

@@ -83,46 +83,30 @@ class CoPawAgent(ReActAgent):
         max_input_length: int = 128 * 1024,  # 128K = 131072 tokens
         namesake_strategy: NamesakeStrategy = "skip",
     ):
-        """Initialize CoPawAgent.
-
-        Args:
-            env_context: Optional environment context to prepend to
-                system prompt
-            enable_memory_manager: Whether to enable memory manager
-            mcp_clients: Optional list of MCP clients for tool
-                integration
-            memory_manager: Optional memory manager instance
-            max_iters: Maximum number of reasoning-acting iterations
-                (default: 50)
-            max_input_length: Maximum input length in tokens for model
-                context window (default: 128K = 131072)
-            namesake_strategy: Strategy to handle namesake tool functions.
-                Options: "override", "skip", "raise", "rename"
-                (default: "skip")
-        """
+        """Initialize CoPawAgent."""
+        # 1. Create model and formatter
+        model, formatter = create_model_and_formatter()
+        
+        # 2. Set local attributes safely (MUST BE BEFORE TOOLKIT POPULATION)
         self._env_context = env_context
         self._max_input_length = max_input_length
         self._mcp_clients = mcp_clients or []
         self._namesake_strategy = namesake_strategy
-
+        
         # Memory compaction threshold: configurable ratio of max_input_length
         self._memory_compact_threshold = int(
             max_input_length * MEMORY_COMPACT_RATIO,
         )
 
-        # Initialize toolkit with built-in tools
-        toolkit = self._create_toolkit(namesake_strategy=namesake_strategy)
-
-        # Load and register skills
+        # 3. Pre-initialize and populate toolkit
+        toolkit = Toolkit()
+        self._populate_toolkit(toolkit, namesake_strategy)
         self._register_skills(toolkit)
 
-        # Build system prompt
-        sys_prompt = self._build_sys_prompt()
+        # 4. Build system prompt using the pre-populated toolkit
+        sys_prompt = self._build_initial_prompt(toolkit, env_context)
 
-        # Create model and formatter using factory method
-        model, formatter = create_model_and_formatter()
-
-        # Initialize parent ReActAgent
+        # 5. Now call super().__init__ with EVERYTHING ready
         super().__init__(
             name="Friday",
             model=model,
@@ -132,6 +116,8 @@ class CoPawAgent(ReActAgent):
             formatter=formatter,
             max_iters=max_iters,
         )
+
+        self.toolkit = toolkit
 
         # Setup memory manager
         self._setup_memory_manager(
@@ -151,57 +137,41 @@ class CoPawAgent(ReActAgent):
         # Register hooks
         self._register_hooks()
 
-    def _create_toolkit(
+    def _build_initial_prompt(self, toolkit: Toolkit, env_context: Optional[str]) -> str:
+        """Helper to build prompt during __init__ before self is ready."""
+        sys_prompt = build_system_prompt_from_working_dir()
+        if env_context is not None:
+            sys_prompt = env_context + "\n\n" + sys_prompt
+        
+        # Append tool descriptions
+        tools_schema = toolkit.get_json_schemas()
+        if tools_schema:
+            sys_prompt += "\n\n# Available Tools\n"
+            import json
+            sys_prompt += json.dumps(tools_schema, indent=2, ensure_ascii=False)
+            sys_prompt += "\n\nTo use a tool, output a JSON object like: {\"name\": \"tool_name\", \"parameters\": {\"param1\": \"value1\"}}"
+
+        # Append agent skills prompt
+        skill_prompt = toolkit.get_agent_skill_prompt()
+        if skill_prompt:
+            sys_prompt += "\n\n" + skill_prompt
+
+        return sys_prompt
+
+    def _populate_toolkit(
         self,
+        toolkit: Toolkit,
         namesake_strategy: NamesakeStrategy = "skip",
-    ) -> Toolkit:
-        """Create and populate toolkit with built-in tools.
-
-        Args:
-            namesake_strategy: Strategy to handle namesake tool functions.
-                Options: "override", "skip", "raise", "rename"
-                (default: "skip")
-
-        Returns:
-            Configured toolkit instance
-        """
-        toolkit = Toolkit()
-
-        # Register built-in tools
-        toolkit.register_tool_function(
-            execute_shell_command,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            read_file,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            write_file,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            edit_file,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            browser_use,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            desktop_screenshot,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            send_file_to_user,
-            namesake_strategy=namesake_strategy,
-        )
-        toolkit.register_tool_function(
-            get_current_time,
-            namesake_strategy=namesake_strategy,
-        )
-
-        return toolkit
+    ) -> None:
+        """Populate toolkit with built-in tools."""
+        toolkit.register_tool_function(execute_shell_command, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(read_file, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(write_file, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(edit_file, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(browser_use, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(desktop_screenshot, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(send_file_to_user, namesake_strategy=namesake_strategy)
+        toolkit.register_tool_function(get_current_time, namesake_strategy=namesake_strategy)
 
     def _register_skills(self, toolkit: Toolkit) -> None:
         """Load and register skills from working directory.
@@ -215,12 +185,39 @@ class CoPawAgent(ReActAgent):
         working_skills_dir = get_working_skills_dir()
         available_skills = list_available_skills()
 
+        import importlib.util
+        import sys
+
         for skill_name in available_skills:
             skill_dir = working_skills_dir / skill_name
             if skill_dir.exists():
                 try:
+                    # 1. Register as Agent Skill (Instructional)
                     toolkit.register_agent_skill(str(skill_dir))
-                    logger.debug("Registered skill: %s", skill_name)
+                    logger.debug("Registered skill instruction: %s", skill_name)
+
+                    # 2. Try to register main script as a callable tool
+                    # convention: scripts/{skill_name_underscore}.py containing {skill_name_underscore} function
+                    underscore_name = skill_name.replace("-", "_")
+                    script_path = skill_dir / "scripts" / f"{underscore_name}.py"
+                    
+                    if script_path.exists():
+                        spec = importlib.util.spec_from_file_location(underscore_name, str(script_path))
+                        if spec and spec.loader:
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[underscore_name] = module
+                            spec.loader.exec_module(module)
+                            
+                            # Get the function
+                            func = getattr(module, underscore_name, None)
+                            if func and callable(func):
+                                toolkit.register_tool_function(
+                                    func,
+                                    func_name=skill_name, # keep kebab-case for the tool name
+                                    namesake_strategy=self._namesake_strategy
+                                )
+                                logger.info("Registered skill function as tool: %s", skill_name)
+
                 except Exception as e:
                     logger.error(
                         "Failed to register skill '%s': %s",
@@ -237,6 +234,20 @@ class CoPawAgent(ReActAgent):
         sys_prompt = build_system_prompt_from_working_dir()
         if self._env_context is not None:
             sys_prompt = self._env_context + "\n\n" + sys_prompt
+        
+        # Append tool descriptions
+        tools_schema = self.toolkit.get_json_schemas()
+        if tools_schema:
+            sys_prompt += "\n\n# Available Tools\n"
+            import json
+            sys_prompt += json.dumps(tools_schema, indent=2, ensure_ascii=False)
+            sys_prompt += "\n\nTo use a tool, output a JSON object like: {\"name\": \"tool_name\", \"parameters\": {\"param1\": \"value1\"}}"
+
+        # Append agent skills prompt
+        skill_prompt = self.toolkit.get_agent_skill_prompt()
+        if skill_prompt:
+            sys_prompt += "\n\n" + skill_prompt
+
         return sys_prompt
 
     def _setup_memory_manager(
@@ -521,7 +532,31 @@ class CoPawAgent(ReActAgent):
             has_tools=bool(self.toolkit.get_json_schemas()),
         )
 
-        return await super()._reasoning(tool_choice=tool_choice)
+        msg_reasoning = await super()._reasoning(tool_choice=tool_choice)
+        
+        # Intercept: If the response is pure JSON tool call text (common for Ollama)
+        # convert it into structured content blocks so ReActAgent executes it.
+        if msg_reasoning.content and isinstance(msg_reasoning.content, str):
+            text = msg_reasoning.content.strip()
+            if text.startswith('{"name":') and text.endswith('}'):
+                try:
+                    import json
+                    tool_data = json.loads(text)
+                    if "name" in tool_data:
+                        # Convert string to ToolUseBlock structure
+                        # ReActAgent logic expects content to be a list of blocks
+                        # if it's supposed to contain a tool call.
+                        from agentscope.message import ToolUseBlock
+                        block = ToolUseBlock(
+                            name=tool_data["name"],
+                            input=tool_data.get("parameters", {}),
+                        )
+                        # Re-wrap content
+                        msg_reasoning.content = [block]
+                except:
+                    pass
+                    
+        return msg_reasoning
 
     async def reply(
         self,

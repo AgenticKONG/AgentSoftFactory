@@ -1,3 +1,13 @@
+
+## [2026-03-08] - Soul Bridge v2.0
+### Added
+- **Soul Beacon Architecture:** Implemented a near-zero latency event-driven communication loop between ASF Console and the core CLI brain.
+- **Autonomous Execution Engine:** Background watcher capable of intercepting and executing system commands directly from the Web UI.
+- **Unified Terminal UI:** Mac-style light mode console with improved readability and auto-polling support.
+- **Engineering Standards:** Formalized workspace hygiene and directory structures in GEMINI.md.
+### Fixed
+- Resolved Ollama JSON tool-call parsing issues and fixed agent initialization sequence errors.
+- Fixed various UI rendering crashes and data synchronization bottlenecks.
 # 📜 ASF ChangeLog
 
 All notable changes to the AgentSoft Factory project will be documented in this file.

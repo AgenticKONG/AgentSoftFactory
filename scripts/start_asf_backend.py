@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # We use string import for reload to work
     uvicorn.run(
         "copaw.app._app:app", 
-        host="127.0.0.1", 
+        host="0.0.0.0", 
         port=8088, 
         reload=False,  # Disabled for stability
         log_level="debug"

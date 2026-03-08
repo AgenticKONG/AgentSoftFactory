@@ -41,13 +41,67 @@ async def run_factory_task(project_id: str, briefing: str):
 
 from ..event_store import asf_event_queue
 
+from ..runner.runner import WORKING_DIR
+
+@router.get("/infra/chat/history")
+async def get_infra_chat_history():
+    """Returns the persistent chat history for the infra-governance session."""
+    session_path = WORKING_DIR / "sessions" / "architect_infra-governance.json"
+    if not session_path.exists():
+        return []
+
+    try:
+        with open(session_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Extract messages from AgentScope JSON format
+        # Format: data['agent']['memory']['content'] = [[MsgUser, []], [MsgAssistant, []], ...]
+        raw_content = data.get("agent", {}).get("memory", {}).get("content", [])
+
+        history = []
+        for turn in raw_content:
+            if not turn or not isinstance(turn, list) or len(turn) == 0:
+                continue
+
+            msg = turn[0]
+            role = msg.get("role")
+
+            # Extract text from blocks
+            text_parts = []
+            content = msg.get("content")
+            if isinstance(content, list):
+                for block in content:
+                    if block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                    elif block.get("type") == "tool_use":
+                        text_parts.append(f"[Tool Call: {block.get('name')}]")
+                    elif block.get("type") == "tool_result":
+                        text_parts.append(f"[Tool Result: {block.get('name')}]")
+            elif isinstance(content, str):
+                text_parts.append(content)
+
+            history.append({
+                "role": role,
+                "content": "\\n".join(text_parts),
+                "timestamp": msg.get("timestamp")
+            })
+
+        # Return only last 20 messages for UI performance
+        return history[-20:]
+
+    except Exception as e:
+        print(f"Error reading history: {e}")
+        return []
+
 @router.get("/infra/info")
+
 async def get_infra_info():
-    """Returns the unified identity and state of the Infra Agent."""
+    """Returns the unified identity, state, and evolution backlog of the Infra Agent."""
     soul_path = "/Users/erickong/AgentSoftFactory/copaw-data/SOUL.md"
     state_path = "/Users/erickong/AgentSoftFactory/copaw-data/infra/infra_state.json"
+    backlog_path = "/Users/erickong/AgentSoftFactory/copaw-data/infra/EVOLUTION_BACKLOG.md"
     
-    # Simple parser for SOUL.md
+    # 1. Parse SOUL.md
     principles = []
     identity = "Infra Agent"
     if os.path.exists(soul_path):
@@ -58,11 +112,17 @@ async def get_infra_info():
                 if line.strip().startswith("- **") or line.strip().startswith("1."):
                     principles.append(line.strip())
     
-    # Load state
+    # 2. Load State
     state = {}
     if os.path.exists(state_path):
         with open(state_path, 'r') as f:
             state = json.load(f)
+    
+    # 3. Load Backlog
+    backlog_content = ""
+    if os.path.exists(backlog_path):
+        with open(backlog_path, 'r') as f:
+            backlog_content = f.read()
             
     return {
         "soul": {
@@ -75,6 +135,7 @@ async def get_infra_info():
             "timestamp": state.get("checkpoint", {}).get("timestamp", "N/A"),
             "current_task": state.get("active_task", {}).get("name", "Idle")
         },
+        "evolution_backlog": backlog_content,
         "evolution_logs": state.get("evolution_logs", [])
     }
 
