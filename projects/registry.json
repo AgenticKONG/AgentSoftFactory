@@ -11,24 +11,29 @@
             "path": "/Users/erickong/AgentSoftFactory/projects/003-life-river-dh"
         },
         {
-            "id": "004-data-cleaner",
-            "name": "Data Cleaning Utility",
-            "path": "/Users/erickong/AgentSoftFactory/projects/004-data-cleaner"
+            "id": "L1-DATA-Parser",
+            "name": "DTHBH Data Parser",
+            "path": "/Users/erickong/AgentSoftFactory/projects/L1-DATA-Parser"
         },
         {
-            "id": "002-web-scraper",
-            "name": "Auto Web Scraper Test",
-            "path": "/Users/erickong/AgentSoftFactory/projects/002-web-scraper"
+            "id": "L1-BACK-API",
+            "name": "DTHBH Mock API",
+            "path": "/Users/erickong/AgentSoftFactory/projects/L1-BACK-API"
         },
         {
-            "id": "baseline-001-scraper",
-            "name": "Auto Scraper Base",
-            "path": "/Users/erickong/AgentSoftFactory/projects/baseline-001-scraper"
+            "id": "L1-FRONT-Card",
+            "name": "DTHBH Vue Card",
+            "path": "/Users/erickong/AgentSoftFactory/projects/L1-FRONT-Card"
         },
         {
-            "id": "baseline-002-viz",
-            "name": "Auto D3 Viz Base",
-            "path": "/Users/erickong/AgentSoftFactory/projects/baseline-002-viz"
+            "id": "L1-VIZ-Bar",
+            "name": "DTHBH D3 BarChart",
+            "path": "/Users/erickong/AgentSoftFactory/projects/L1-VIZ-Bar"
+        },
+        {
+            "id": "L1-NARR-Sum",
+            "name": "DTHBH Narrative Summary",
+            "path": "/Users/erickong/AgentSoftFactory/projects/L1-NARR-Sum"
         }
     ]
 }

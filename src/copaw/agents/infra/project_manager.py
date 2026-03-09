@@ -49,7 +49,7 @@ class ASFProjectManager:
                             continue
         return templates
 
-    def init_project(self, project_id: str, name: str, description: str, team_template: str = "viz-d3-v1"):
+    def init_project(self, project_id: str, name: str, description: str, team_template: str = "L1-script-python", level: str = "L1", category: str = "CLI"):
         """Initializes a new project directory using a template."""
         project_path = os.path.join(self.projects_dir, project_id)
         if os.path.exists(project_path):
@@ -65,8 +65,11 @@ class ASFProjectManager:
             "meta": {
                 "name": name,
                 "description": description,
+                "level": level or template_data.get("default_level", "L1"),
+                "category": category or template_data.get("category", "CLI"),
                 "created_at": datetime.now().isoformat(),
-                "status": "active"
+                "status": "active",
+                "mission_command": ""
             },
             "team": {
                 "template_id": template_data.get("id", "default"),

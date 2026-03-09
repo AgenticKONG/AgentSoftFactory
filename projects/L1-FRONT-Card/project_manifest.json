@@ -1,0 +1,31 @@
+{
+    "project_id": "L1-FRONT-Card",
+    "meta": {
+        "name": "DTHBH Vue Card",
+        "description": "Implement a Vue.js artifact card.",
+        "level": "L1",
+        "category": "FRONT",
+        "created_at": "2026-03-09T15:16:17.934344",
+        "status": "active",
+        "mission_command": ""
+    },
+    "team": {
+        "template_id": "L1-script-python",
+        "agents": [
+            {
+                "role": "Product Manager",
+                "model": "llama3.2",
+                "dna_prompt": "Simple requirements to SPEC."
+            },
+            {
+                "role": "Developer",
+                "model": "llama3.2",
+                "dna_prompt": "Fast Python coder. Single file only."
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0
+    }
+}
