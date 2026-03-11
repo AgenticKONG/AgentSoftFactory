@@ -26,6 +26,9 @@ config.json
 !.env.template
 secrets/
 
+# --- LOCAL DOCUMENTATION ---
+/docs/
+
 # --- ASF PRIVATE INFRASTRUCTURE (ERIC'S STEALTH MODE) ---
 # These contain local paths and private logic
 /scripts/
