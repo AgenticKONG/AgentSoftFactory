@@ -1,0 +1,70 @@
+{
+    "project_id": "infra-pc-solidification",
+    "meta": {
+        "name": "PC Module P5 Solidification",
+        "description": "Full P5 audit of PC module: Registry, Setup, Dashboard, Workstation",
+        "status": "completed",
+        "created_at": "2026-03-12T08:00:00.000000",
+        "mission_command": "Execute full QA test script in SPEC.md. Verify TC-01 to TC-12. Return Pass/Fail verdict.",
+        "process": "P5",
+        "max_loops": 5,
+        "max_sqa_loops": 3
+    },
+    "specs": {
+        "category": "INFRA",
+        "level": "L3",
+        "team": "T5",
+        "process": "P5",
+        "max_loops": 10,
+        "target_files": [
+            "console/src/pages/ProjectList/index.tsx",
+            "console/src/pages/ProjectSetup/index.tsx",
+            "console/src/pages/ProjectDashboard/index.tsx",
+            "console/src/pages/Workstation/index.tsx",
+            "src/copaw/agents/infra/project_manager.py",
+            "src/copaw/config/pc_rules.json",
+            "src/copaw/app/routers/asf.py"
+        ],
+        "f_memo": [
+            "#governance-audit",
+            "#pc-module",
+            "#lctpf"
+        ]
+    },
+    "team": {
+        "structure": "T5",
+        "agents": [
+            {
+                "id": "infra-agent",
+                "name": "Infra Agent (Me)",
+                "role": "DEV",
+                "model": null,
+                "dna_prompt": "IA delivers physical code via CLI",
+                "skills": [],
+                "mcp": []
+            },
+            {
+                "id": "doubao-jqa",
+                "name": "Doubao JQA",
+                "role": "Junior-QA",
+                "model": "Doubao-Seed-2.0-Code",
+                "dna_prompt": "JSON-ONLY QA. Output: {\"decision\": \"PASS\"/\"FAIL\", \"reason\": \"...\"}",
+                "skills": [],
+                "mcp": []
+            },
+            {
+                "id": "glm-sqa",
+                "name": "GLM SQA",
+                "role": "Senior-QA",
+                "model": "GLM-4.7",
+                "dna_prompt": "JSON-ONLY QA. Output: {\"decision\": \"PASS\"/\"FAIL\", \"reason\": \"...\"}",
+                "skills": [],
+                "mcp": []
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0
+    }
+}

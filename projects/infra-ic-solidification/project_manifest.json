@@ -1,0 +1,51 @@
+{
+    "project_id": "infra-ic-solidification",
+    "meta": {
+        "name": "Infra: IC Solidification & SPEC",
+        "description": "Formalize the detailed design SPEC for Infra Center and perform full P5 audit.",
+        "level": "L3",
+        "category": "INFRA",
+        "process": "P5",
+        "created_at": "2026-03-10T13:21:39.366614",
+        "status": "completed",
+        "mission_command": "check the spec!",
+        "max_loops": 5,
+        "max_sqa_loops": 3
+    },
+    "team": {
+        "structure": "T5",
+        "agents": [
+            {
+                "id": "IA_BRAIN",
+                "name": "Infra Agent Brain (IA)",
+                "role": "DEV",
+                "model": null,
+                "dna_prompt": "Identity: Sovereignty Infra Agent. No model assigned because IA delivers code physically via CLI.",
+                "skills": [],
+                "mcp": []
+            },
+            {
+                "id": "minimax",
+                "name": null,
+                "role": "Junior-QA",
+                "model": "Doubao-Seed-2.0-Code",
+                "dna_prompt": "CRITICAL: You are a JSON-ONLY QA robot. You MUST audit the input and output EXACTLY ONE JSON block: {\"decision\": \"PASS\"/\"FAIL\", \"reason\": \"...\"}. NO CONVERSATION. PASS only if 4 tabs exist and code matches SPEC.",
+                "skills": [],
+                "mcp": []
+            },
+            {
+                "id": "glm-4.7",
+                "name": null,
+                "role": "Senior-QA",
+                "model": "GLM-4.7",
+                "dna_prompt": "CRITICAL: You are a JSON-ONLY QA robot. Audit logic and alignment. Output EXACTLY ONE JSON block: {\"decision\": \"PASS\"/\"FAIL\", \"reason\": \"...\"}.",
+                "skills": [],
+                "mcp": []
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0
+    }
+}

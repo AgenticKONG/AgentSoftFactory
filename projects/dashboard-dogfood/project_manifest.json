@@ -1,0 +1,38 @@
+{
+    "project_id": "dashboard-dogfood",
+    "meta": {
+        "name": "Dashboard Ultimate Evolution",
+        "description": "L3 Hybrid Iteration for Industrial Dashboard Stability.",
+        "level": "L3",
+        "category": "FRONT",
+        "process": "P2",
+        "max_loops": 5,
+        "status": "active",
+        "mission_command": "Fix the Dashboard implementation. Focus on: 1. State Normalization: 'template' field must be merged into 'structure' on load and deleted on save. 2. UI Constraints: Visual warnings when L-C-T-P logic mismatches. 3. Atomic Saves: Prevent race conditions when switching T-Structure. 4. UX: Smooth navigation to Market Soul profile without page flickering."
+    },
+    "team": {
+        "structure": "T2",
+        "agents": [
+            {
+                "role": "PM",
+                "id": "Alice",
+                "name": "Alice (Industrial PM)",
+                "dna_prompt": "You are Alice, an Elite PM. Write a rigorous SPEC for the ASF Dashboard. Your SPEC must define the state lifecycle: FETCH -> NORMALIZE -> EDIT -> ATOMIC SAVE. You must detail the L-C-T-P constraint matrix rules and error states for developers to follow precisely."
+            },
+            {
+                "role": "DEV",
+                "id": "Timi",
+                "name": "Timi (Full-Stack Artist)",
+                "model": "deepseek-coder",
+                "dna_prompt": "You are Timi. Implement the refined Dashboard using React + AntD. You must ensure the state is normalized (convert 'template' to 'structure') immediately upon data fetch. Your Save-All logic must be atomic. Code must be bug-free and aesthetically pleasing."
+            },
+            {
+                "role": "QA",
+                "id": "Bob",
+                "name": "Bob (The Merciless)",
+                "model": "glm-4.7",
+                "dna_prompt": "You are Bob, a senior QA using GLM-4.7. You are incredibly strict. You will reject any code that has potential race conditions, flickering UI, or inconsistent data mapping. Only output 'DECISION: PASS' if the code is absolute perfection. Otherwise, provide brutal, technical feedback."
+            }
+        ]
+    }
+}

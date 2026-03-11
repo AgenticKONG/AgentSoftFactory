@@ -1,0 +1,34 @@
+{
+    "project_id": "infra-ic-final-verify",
+    "meta": {
+        "name": "Final Verification: IC v4.1",
+        "description": "Strict adherence to P5 tiered audit for the current UI fix.",
+        "level": "L3",
+        "category": "INFRA",
+        "process": "P5",
+        "created_at": "2026-03-10T11:12:09.477079",
+        "status": "active",
+        "mission_command": ""
+    },
+    "team": {
+        "structure": "T5",
+        "agents": [
+            {
+                "role": "DEV",
+                "name": "Infra Thug"
+            },
+            {
+                "role": "Junior-QA",
+                "id": "llama3.2"
+            },
+            {
+                "role": "Senior-QA",
+                "id": "glm-4.7"
+            }
+        ]
+    },
+    "metrics": {
+        "total_loops": 0,
+        "success_rate": 0.0
+    }
+}

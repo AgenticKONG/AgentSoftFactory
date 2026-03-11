@@ -126,12 +126,19 @@ const ProjectDashboard = () => {
             <div style={{ marginBottom: 20, padding: 16, background: '#f1f5f9', borderRadius: 12 }}>
               <Row gutter={24}>
                 <Col span={6}><Text strong style={{fontSize:10}}>TEAM (T)</Text><br/>
-                  <Select value={project.team.structure} style={{width:'100%'}} onChange={v => Modal.confirm({ onOk: () => updateState(p => ({...p, team: {...p.team, structure:v, agents: JSON.parse(JSON.stringify(TEAM_DEFS[v]))}}))})}
+                  <Select value={project.team.structure} style={{width:'100%'}} onChange={v => {
+                    const processId = v.replace('T', 'P');
+                    Modal.confirm({ 
+                      onOk: () => updateState(p => ({...p, team: {...p.team, structure:v, agents: JSON.parse(JSON.stringify(TEAM_DEFS[v]))}, meta: {...p.meta, process: processId}}))
+                    })}}
                     options={Object.keys(TEAM_DEFS).map(k => ({value:k, label:k}))} />
                 </Col>
                 <Col span={6}><Text strong style={{fontSize:10}}>PROCESS (P)</Text><br/>
-                  <Select value={project.meta.process} style={{width:'100%'}} onChange={v => updateState(p => ({...p, meta: {...p.meta, process:v}}))}
-                    options={[{value:'P1',label:'Linear'},{value:'P2',label:'Agile'},{value:'P5',label:'Infra-Audit'}]} />
+                  <Select value={project.meta.process} style={{width:'100%'}} onChange={v => {
+                    const teamId = v.replace('P', 'T');
+                    updateState(p => ({...p, meta: {...p.meta, process: v}, team: {...p.team, structure: TEAM_DEFS[teamId] ? teamId : p.team.structure}}));
+                  }}
+                    options={[{value:'P1',label:'P1: Linear'},{value:'P2',label:'P2: Agile'},{value:'P3',label:'P3: Visual'},{value:'P4',label:'P4: Review'},{value:'P5',label:'P5: Infra-Audit'}]} />
                 </Col>
                 <Col span={6}><Text strong style={{fontSize:10}}>JQA LIMIT</Text><br/>
                   <InputNumber min={1} value={project.meta.max_loops || 10} onChange={v => updateState(p => ({...p, meta: {...p.meta, max_loops: v}}))} />
@@ -174,7 +181,50 @@ const ProjectDashboard = () => {
           <Card title="Infrastructure Matrix" style={{ borderRadius: 16 }}>
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="ID"><code>{projectId}</code></Descriptions.Item>
-              <Descriptions.Item label="Category"><Select value={project.meta?.category} size="small" style={{width:'100%'}} onChange={v => updateState(p => ({...p, meta: {...p.meta, category: v}}))} options={['DATA','BACK','FRONT','VIZ','NARR','INFRA'].map(c => ({value:c, label:c}))} /></Descriptions.Item>
+              <Descriptions.Item label="Category">
+                <Select 
+                  value={project.meta?.category} 
+                  size="small" 
+                  style={{width:'100%'}} 
+                  onChange={async v => {
+                    const level = project.meta?.level || 'L1';
+                    try {
+                      const res = await fetch(`/api/asf/pc/defaults?category=${v}&level=${level}`);
+                      const defaults = await res.json();
+                      updateState(p => ({
+                        ...p, 
+                        meta: {...p.meta, category: v, level: defaults.level || level},
+                        team: {...p.team, structure: defaults.team, agents: JSON.parse(JSON.stringify(TEAM_DEFS[defaults.team] || TEAM_DEFS.T1))}
+                      }));
+                    } catch {
+                      updateState(p => ({...p, meta: {...p.meta, category: v}}));
+                    }
+                  }} 
+                  options={['DATA','BACK','FRONT','VIZ','NARR','INFRA'].map(c => ({value:c, label:c}))} 
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="Level">
+                <Select 
+                  value={project.meta?.level || 'L1'} 
+                  size="small" 
+                  style={{width:'100%'}} 
+                  onChange={async v => {
+                    const category = project.meta?.category || 'FRONT';
+                    try {
+                      const res = await fetch(`/api/asf/pc/defaults?category=${category}&level=${v}`);
+                      const defaults = await res.json();
+                      updateState(p => ({
+                        ...p, 
+                        meta: {...p.meta, level: v},
+                        team: {...p.team, structure: defaults.team}
+                      }));
+                    } catch {
+                      updateState(p => ({...p, meta: {...p.meta, level: v}}));
+                    }
+                  }} 
+                  options={['L1','L2','L3','L4','L5'].map(l => ({value:l, label:l}))} 
+                />
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

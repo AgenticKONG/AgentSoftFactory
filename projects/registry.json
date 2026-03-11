@@ -69,6 +69,27 @@
             "id": "infra-ic-solidification",
             "name": "Infra: IC Solidification & SPEC",
             "path": "/Users/erickong/AgentSoftFactory/projects/infra-ic-solidification"
+        },
+        {
+            "id": "infra-pc-solidification-audit",
+            "name": "Project Center Solidification Audit",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-pc-solidification-audit",
+            "category": "INFRA",
+            "level": "L3"
+        },
+        {
+            "id": "infra-pc-solidification",
+            "name": "PC Module P5 Solidification",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-pc-solidification",
+            "category": "INFRA",
+            "level": "L3"
+        },
+        {
+            "id": "infra-pc-workstation-visual-audit",
+            "name": "PC Workstation Visual Audit",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-pc-workstation-visual-audit",
+            "category": "INFRA",
+            "level": "L3"
         }
     ]
 }

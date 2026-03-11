@@ -10,6 +10,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, Row, Col, Typography, List, Spin, Button, message, Tabs, Input, Divider, Tag } from 'antd';
 import { Cpu, Zap, LayoutDashboard, BookOpen, Activity, Clock, Shield, Play, Terminal, ChevronRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import api from '../../api';
 import { getApiToken } from "../../api/config";
 
@@ -22,7 +23,12 @@ const InfraCenter = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const fetchChatHistory = useCallback(async () => {
     try {
@@ -83,6 +89,44 @@ const InfraCenter = () => {
 
   useEffect(() => {
     let mounted = true;
+    
+    // WebSocket connection for real-time updates
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/api/asf/infra/ws`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("[IC] WebSocket message:", data);
+        if (data.type === 'new_message' || data.type === 'update') {
+          fetchChatHistory();
+        }
+      } catch {}
+    };
+    
+    ws.onerror = () => {
+      console.log("[IC] WebSocket error, falling back to polling");
+    };
+    
+    // SSE for streaming updates
+    const sseUrl = `/api/asf/infra/chat/stream`;
+    const eventSource = new EventSource(sseUrl);
+    eventSourceRef.current = eventSource;
+    
+    eventSource.addEventListener('update', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log("[IC] SSE update:", data);
+        fetchChatHistory();
+      } catch {}
+    });
+    
+    eventSource.onerror = () => {
+      console.log("[IC] SSE error, relying on polling");
+    };
+    
     const init = async () => {
       setLoading(true);
       try {
@@ -109,6 +153,14 @@ const InfraCenter = () => {
       if (mounted) fetchChatHistory();
     }, 5000);
 
+    const reflexTimer = setInterval(() => {
+      if (mounted) fetchReflexJobs();
+    }, 30000);
+
+    const infraTimer = setInterval(() => {
+      if (mounted) fetchInfraData();
+    }, 30000);
+
     const forceTimeout = setTimeout(() => {
       console.log("[IC] Force timeout - setting loading=false");
       setLoading(false);
@@ -119,7 +171,17 @@ const InfraCenter = () => {
     return () => {
       mounted = false;
       clearInterval(timer);
+      clearInterval(reflexTimer);
+      clearInterval(infraTimer);
       clearTimeout(forceTimeout);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, [fetchInfraData, fetchReflexJobs, fetchChatHistory]);
 
@@ -131,13 +193,27 @@ const InfraCenter = () => {
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isSending) return;
-    setMessages(prev => [...prev, { role: 'user', content: inputValue }]);
+    
+    // Multi-line command support: split by && or ;;
+    const commands = currentInput.split(/&&|;;|\n/).map(c => c.trim()).filter(c => c);
     const currentInput = inputValue;
     setInputValue('');
     setIsSending(true);
+    setShowSuggestions(false);
+    
+    // Add to command history
+    if (currentInput.trim()) {
+      setCmdHistory(prev => {
+        const filtered = prev.filter(c => c !== currentInput);
+        return [currentInput, ...filtered].slice(0, 10);
+      });
+    }
 
-    try {
-      await api.request("/agent/process", {
+    // Execute commands sequentially
+    for (const cmd of commands) {
+      setMessages(prev => [...prev, { role: 'user', content: cmd }]);
+      try {
+        await api.request("/agent/process", {
         method: "POST",
         body: JSON.stringify({
           input: [{
@@ -149,13 +225,14 @@ const InfraCenter = () => {
           channel: "console",
           stream: false 
         })
-      });
-      setTimeout(fetchChatHistory, 1000);
-    } catch (err) {
-      message.error("Link Broken: Neural connection failed.");
-    } finally {
-      setIsSending(false);
+        });
+        await new Promise(r => setTimeout(r, 500)); // Small delay between commands
+      } catch (err) {
+        message.error(`Command failed: ${cmd}`);
+      }
     }
+    setTimeout(fetchChatHistory, 1000);
+    setIsSending(false);
   };
 
   const renderTab1 = () => (
@@ -198,20 +275,35 @@ const InfraCenter = () => {
       </Row>
       
       <Divider orientation="left" style={{marginTop:32}}>Evolution Logs</Divider>
-      <List 
-        size="small" 
-        dataSource={infraData?.evolution_logs || []} 
-        renderItem={(log: any) => (
-          <List.Item style={{border:'none', padding:'8px 0', textAlign:'left'}}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, textAlign:'left', width:'100%' }}>
-              <Tag color="blue" style={{borderRadius:4}}>{log.time || 'N/A'}</Tag> 
-              <Text strong style={{marginRight:8}}>{log.action || 'Unknown'}</Text>
-              <Text type="secondary">{log.correction || ''}</Text>
-            </div>
-          </List.Item>
-        )} 
-        locale={{ emptyText: "No logs recovered." }}
-      />
+      {(() => {
+        const logs = infraData?.evolution_logs || [];
+        // Group by date
+        const grouped: Record<string, any[]> = {};
+        logs.forEach((log: any) => {
+          const date = log.date || 'Unknown';
+          if (!grouped[date]) grouped[date] = [];
+          grouped[date].push(log);
+        });
+        const dates = Object.keys(grouped).sort().reverse();
+        return dates.map(date => (
+          <div key={date} style={{marginBottom: 16}}>
+            <Text strong style={{color: '#2563eb', fontSize: 12}}>{date}</Text>
+            <List 
+              size="small" 
+              dataSource={grouped[date]} 
+              renderItem={(log: any) => (
+                <List.Item style={{border:'none', padding:'4px 0', textAlign:'left'}}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, textAlign:'left', width:'100%' }}>
+                    <Tag color="blue" style={{borderRadius:4}}>{log.time || 'N/A'}</Tag> 
+                    <Text strong style={{marginRight:8}}>{log.action || 'Unknown'}</Text>
+                    <Text type="secondary">{log.correction || ''}</Text>
+                  </div>
+                </List.Item>
+              )} 
+            />
+          </div>
+        ));
+      })()}
     </Card>
   );
 
@@ -261,6 +353,7 @@ const InfraCenter = () => {
       <Col span={8}>
         <Card 
           title={<span><Cpu size={16} style={{marginRight:8, color:'#2563eb'}}/>Housekeeping Jobs</span>} 
+          extra={<Button size="small" onClick={() => fetchReflexJobs()}>Refresh</Button>}
           style={{borderRadius:16, border:'1px solid #e2e8f0', background: '#ffffff'}}
         >
           <List 
@@ -326,7 +419,24 @@ const InfraCenter = () => {
               color: '#1e2937',
               textAlign:'left'
             }}>
-              {String(msg.content || '')}
+              <ReactMarkdown 
+                components={{
+                  code: ({node, className, children, ...props}) => {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const isInline = !match && !className;
+                    return isInline ? (
+                      <code style={{background:'#f1f5f9',padding:'2px 6px',borderRadius:4,fontFamily:'"Fira Code",monospace',fontSize:12}} {...props}>{children}</code>
+                    ) : (
+                      <pre style={{background:'#1e293b',color:'#e2e8f0',padding:12,borderRadius:8,overflow:'auto',fontSize:12}}>
+                        <code {...props}>{children}</code>
+                      </pre>
+                    );
+                  },
+                  pre: ({children}) => <>{children}</>,
+                }}
+              >
+                {String(msg.content || '')}
+              </ReactMarkdown>
             </div>
           </div>
         )})}
@@ -342,7 +452,10 @@ const InfraCenter = () => {
       <div className="terminal-input-area" style={{ padding:16, background:'#f8fafc', borderTop:'1px solid #e2e8f0', textAlign:'left' }}>
         <Input 
           value={inputValue} 
-          onChange={e => setInputValue(e.target.value)} 
+          onChange={e => {
+            setInputValue(e.target.value);
+            setShowSuggestions(e.target.value.length > 0);
+          }} 
           onPressEnter={sendMessage} 
           placeholder="Instruct the Brain..." 
           autoFocus 
@@ -351,6 +464,17 @@ const InfraCenter = () => {
           disabled={isSending} 
           style={{ padding:0, textAlign:'left' }}
         />
+        {showSuggestions && cmdHistory.length > 0 && inputValue && (
+          <div style={{ position:'absolute', bottom:50, left:40, background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, padding:8, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:100 }}>
+            <Text type="secondary" style={{fontSize:10}}>Recent commands:</Text>
+            {cmdHistory.filter(c => c.toLowerCase().includes(inputValue.toLowerCase())).slice(0,3).map((cmd, i) => (
+              <div key={i} style={{ padding:'4px 8px', cursor:'pointer', borderRadius:4 }} 
+                onClick={() => { setInputValue(cmd); setShowSuggestions(false); }}>
+                <Text style={{fontSize:12}}>{cmd}</Text>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

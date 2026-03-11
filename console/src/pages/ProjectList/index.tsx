@@ -18,13 +18,18 @@ const ProjectList = () => {
     try {
       const res = await fetch('/api/asf/projects/list');
       const data = await res.json();
-      setProjects(data);
+      if (data && data.projects) {
+        setProjects(data.projects);
+      } else {
+        setProjects([]);
+      }
     } catch (err) {
       message.error("Failed to load project list.");
     } finally {
       setLoading(false);
     }
   };
+
 
   if (loading) return <div style={{ padding: '100px', textAlign: 'center' }}><Spin size="large" tip="Loading ASF Factory Status..." /></div>;
 
