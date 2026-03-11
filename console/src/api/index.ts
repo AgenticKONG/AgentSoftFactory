@@ -1,6 +1,7 @@
 export * from "./types";
 
-export { request } from "./request";
+import { request } from "./request";
+export { request };
 
 export { getApiUrl, getApiToken } from "./config";
 
@@ -60,6 +61,9 @@ export const api = {
 
   // MCP Clients
   ...mcpApi,
+
+  // Core request function
+  request,
 };
 
 export default api;

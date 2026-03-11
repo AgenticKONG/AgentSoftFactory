@@ -49,31 +49,46 @@ class ASFProjectManager:
                             continue
         return templates
 
-    def init_project(self, project_id: str, name: str, description: str, team_template: str = "L1-script-python", level: str = "L1", category: str = "CLI"):
-        """Initializes a new project directory using a template."""
+    def init_project(self, project_id: str, name: str, description: str, team_structure: str = "T1", level: str = "L1", category: str = "CLI"):
+        """Initializes a new project directory with fixed Team Structure."""
         project_path = os.path.join(self.projects_dir, project_id)
         if os.path.exists(project_path):
             raise Exception(f"Project {project_id} already exists.")
 
         os.makedirs(project_path)
         
-        # Load template data
-        template_data = self._load_template(team_template)
+        # Team Structures (T-Genes)
+        structures = {
+            "T1": [{"role": "PM"}, {"role": "DEV"}],
+            "T2": [{"role": "PM"}, {"role": "DEV"}, {"role": "QA"}],
+            "T3": [{"role": "PM"}, {"role": "VD"}, {"role": "DEV"}, {"role": "QA"}],
+            "T4": [{"role": "PM"}, {"role": "VD"}, {"role": "DEV"}, {"role": "QA"}, {"role": "Infra"}],
+            "T5": [
+                {"role": "DEV", "id": "infra-agent", "name": "Infra Agent (Me)"}, 
+                {"role": "Junior-QA", "id": "llama3.2"}, 
+                {"role": "Senior-QA", "id": "glm-4.7"}
+            ]
+        }
+        
+        team_agents = structures.get(team_structure, structures["T1"])
         
         manifest = {
             "project_id": project_id,
             "meta": {
                 "name": name,
                 "description": description,
-                "level": level or template_data.get("default_level", "L1"),
-                "category": category or template_data.get("category", "CLI"),
+                "level": level,
+                "category": category,
+                "process": "P1",
+                "max_loops": 10, # JQA limit
+                "max_sqa_loops": 3, # SQA limit
                 "created_at": datetime.now().isoformat(),
                 "status": "active",
                 "mission_command": ""
             },
             "team": {
-                "template_id": template_data.get("id", "default"),
-                "agents": template_data.get("team", [])
+                "structure": team_structure,
+                "agents": team_agents
             },
             "metrics": {"total_loops": 0, "success_rate": 0.0}
         }

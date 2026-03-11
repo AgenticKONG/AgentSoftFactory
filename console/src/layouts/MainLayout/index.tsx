@@ -12,6 +12,7 @@ import ProjectDashboard from "../../pages/ProjectDashboard";
 import ProjectList from "../../pages/ProjectList";
 import InfraCenter from "../../pages/InfraCenter";
 import AgentMarket from "../../pages/AgentMarket";
+import AgentProfile from "../../pages/AgentMarket/AgentProfile";
 import ChannelsPage from "../../pages/Control/Channels";
 import SessionsPage from "../../pages/Control/Sessions";
 import CronJobsPage from "../../pages/Control/CronJobs";
@@ -39,7 +40,6 @@ const pathToKey: Record<string, string> = {
   "/skills": "skills",
   "/mcp": "mcp",
   "/workspace": "workspace",
-  "/agents": "agents",
   "/models": "models",
   "/environments": "environments",
   "/agent-config": "agent-config",
@@ -52,6 +52,7 @@ export default function MainLayout() {
   
   let selectedKey = pathToKey[currentPath] || "chat";
   if (matchPath("/projects/:id", currentPath)) selectedKey = "project-list";
+  if (matchPath("/agent-market/:id", currentPath)) selectedKey = "agent-market";
 
   useEffect(() => {
     if (currentPath === "/") navigate("/projects", { replace: true });
@@ -73,6 +74,7 @@ export default function MainLayout() {
               <Route path="/project-setup" element={<ProjectSetup />} />
               <Route path="/projects/:projectId" element={<ProjectDashboard />} />
               <Route path="/agent-market" element={<AgentMarket />} />
+              <Route path="/agent-market/:agentId" element={<AgentProfile />} />
               <Route path="/channels" element={<ChannelsPage />} />
               <Route path="/sessions" element={<SessionsPage />} />
               <Route path="/cron-jobs" element={<CronJobsPage />} />

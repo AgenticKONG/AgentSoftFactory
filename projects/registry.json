@@ -34,6 +34,41 @@
             "id": "L1-NARR-Sum",
             "name": "DTHBH Narrative Summary",
             "path": "/Users/erickong/AgentSoftFactory/projects/L1-NARR-Sum"
+        },
+        {
+            "id": "T-L3-LifeRiver-Viz",
+            "name": "Test-L3-Viz",
+            "path": "/Users/erickong/AgentSoftFactory/projects/T-L3-LifeRiver-Viz"
+        },
+        {
+            "id": "dashboard-dogfood",
+            "name": "Dashboard Evolution (Dogfooding)",
+            "path": "/Users/erickong/AgentSoftFactory/projects/dashboard-dogfood"
+        },
+        {
+            "id": "infra-dashboard-robustness",
+            "name": "Infra: Dashboard Robustness Test",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-dashboard-robustness"
+        },
+        {
+            "id": "infra-system-upgrade-audit",
+            "name": "Audit: New T5/P5 Integration",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-system-upgrade-audit"
+        },
+        {
+            "id": "infra-ic-visibility-audit",
+            "name": "Audit: Infra Center Data Visibility",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-ic-visibility-audit"
+        },
+        {
+            "id": "infra-ic-final-verify",
+            "name": "Final Verification: IC v4.1",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-ic-final-verify"
+        },
+        {
+            "id": "infra-ic-solidification",
+            "name": "Infra: IC Solidification & SPEC",
+            "path": "/Users/erickong/AgentSoftFactory/projects/infra-ic-solidification"
         }
     ]
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Col, Row, Typography, Tag, Button, Empty, Spin, message, Space, Avatar } from 'antd';
 import { Sparkles, ArrowRight, UserPlus, Info } from 'lucide-react';
 
@@ -7,6 +8,7 @@ const { Title, Text, Paragraph } = Typography;
 const AgentMarket = () => {
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchMarket();
@@ -46,7 +48,7 @@ const AgentMarket = () => {
                 hoverable 
                 style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
                 actions={[
-                  <Button type="link" icon={<Info size={14}/>}>View Profile</Button>,
+                  <Button type="link" icon={<Info size={14}/>} onClick={() => navigate(`/agent-market/${agent.id}`)}>View Profile</Button>,
                   <Button type="primary" ghost size="small" style={{ borderRadius: '6px' }}>Hire Clone</Button>
                 ]}
               >

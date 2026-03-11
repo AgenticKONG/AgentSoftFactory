@@ -1,11 +1,17 @@
-import { useEffect, useState, useRef } from 'react';
-import { Card, Row, Col, Typography, List, Spin, Button, message, Tabs, Input, Divider } from 'antd';
-import { 
-  Cpu, Zap, LayoutDashboard, 
-  ChevronRight, Terminal, BookOpen
-} from 'lucide-react';
+/**
+ * 🛡️ ASF INFRA CENTER - SOURCE OF TRUTH (SOLIDIFIED)
+ * Version: 1.6
+ * Alignment: [SPEC-IC-P5-20260310]
+ * Changes: 
+ * 1. Fixed Card 1 Icon: Switched Shield to Activity per SPEC mapping.
+ * 2. Switched from fetch to standard 'api' helper.
+ * 3. Restored from corruption after DEV hallucination.
+ */
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Card, Row, Col, Typography, List, Spin, Button, message, Tabs, Input, Divider, Tag } from 'antd';
+import { Cpu, Zap, LayoutDashboard, BookOpen, Activity, Clock, Shield, Play, Terminal, ChevronRight } from 'lucide-react';
 import api from '../../api';
-import { getApiUrl, getApiToken } from "../../api/config";
+import { getApiToken } from "../../api/config";
 
 const { Title, Text } = Typography;
 
@@ -13,42 +19,109 @@ const InfraCenter = () => {
   const [loading, setLoading] = useState(true);
   const [infraData, setInfraData] = useState<any>(null);
   const [reflexJobs, setReflexJobs] = useState<any[]>([]);
-  
-  const [messages, setMessages] = useState<any[]>([
-    { role: 'system', content: '[ CONNECTION ESTABLISHED: ASF INFRA LINK v2.0 ]' }
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const fetchChatHistory = useCallback(async () => {
+    try {
+      console.log("[IC] Fetching chat history...");
+      const history = await api.request<any[]>('/asf/infra/chat/history');
+      console.log("[IC] Chat history received:", history);
+      if (Array.isArray(history)) {
+        console.log("[IC] Setting messages, count:", history.length);
+        setMessages(history);
+      }
+    } catch (err) {
+      console.error("[IC] Neural Link Sync Error:", err);
+    }
+  }, []);
+
+  const fetchInfraData = useCallback(async () => {
+      try {
+        console.log("[IC] Fetching infra data...");
+        const data = await api.request<any>('/asf/infra/info');
+        console.log("[IC] Infra data received:", JSON.stringify(data).slice(0, 200));
+        if (data) {
+          console.log("[IC] Setting infraData state...");
+          setInfraData(data);
+          console.log("[IC] infraData state set, state:", data.state, "soul:", data.soul?.principles?.length);
+        }
+        return data;
+      } catch (err) {
+        console.error("[IC] Infra Data Fetch Error:", err);
+        const fallback = { soul: { principles: [] }, state: {}, evolution_logs: [] };
+        setInfraData(fallback);
+        return null;
+      }
+    }, []);
+
+  const fetchReflexJobs = useCallback(async () => {
+    try {
+      console.log("[IC] Fetching reflex jobs...");
+      const allJobs = await api.listCronJobs();
+      console.log("[IC] Reflex jobs received:", Array.isArray(allJobs) ? `${allJobs.length} jobs` : "null");
+      const filtered = Array.isArray(allJobs) ? allJobs.filter((job: any) => job.meta?.category === 'infra') : [];
+      setReflexJobs(filtered);
+      return filtered;
+    } catch (err) {
+      console.error("[IC] Reflex List Error:", err);
+      setReflexJobs([]);
+      return [];
+    }
+  }, []);
+
+  const runReflexJob = async (jobId: string) => {
+    try {
+      await api.triggerCronJob(jobId);
+      message.success("Reflex Triggered.");
+    } catch (err) {
+      message.error("Reflex Failed.");
+    }
+  };
+
   useEffect(() => {
+    let mounted = true;
     const init = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchInfraData(), fetchReflexJobs(), fetchChatHistory()]);
-      } catch (err) {
-        console.error("Init failed:", err);
+        const [infra, jobs, history] = await Promise.allSettled([
+          fetchInfraData(),
+          fetchReflexJobs(),
+          fetchChatHistory()
+        ]);
+        console.log("[IC] Init complete:", { 
+          infra: infra.status, 
+          jobs: jobs.status, 
+          history: history.status 
+        });
+      } catch (e) {
+        console.error("Init failed:", e);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          console.log("[IC] Loading set to false");
+        }
       }
     };
-    init();
-    const timer = setInterval(fetchChatHistory, 3000);
-    return () => clearInterval(timer);
-  }, []);
+    const timer = setInterval(() => {
+      if (mounted) fetchChatHistory();
+    }, 5000);
 
-  const fetchChatHistory = async () => {
-    try {
-      const res = await fetch('/api/asf/infra/chat/history');
-      const history = await res.json();
-      if (history && Array.isArray(history) && history.length > 0) {
-        setMessages([
-          { role: 'system', content: '[ CONNECTION ESTABLISHED: ASF INFRA LINK v2.0 ]' },
-          ...history
-        ]);
-      }
-    } catch (err) { console.error("Failed to fetch history:", err); }
-  };
+    const forceTimeout = setTimeout(() => {
+      console.log("[IC] Force timeout - setting loading=false");
+      setLoading(false);
+    }, 10000);
+
+    init();
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+      clearTimeout(forceTimeout);
+    };
+  }, [fetchInfraData, fetchReflexJobs, fetchChatHistory]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -56,226 +129,283 @@ const InfraCenter = () => {
     }
   }, [messages]);
 
-  const fetchInfraData = async () => {
-    try {
-      const res = await fetch('/api/asf/infra/info');
-      const data = await res.json();
-      setInfraData(data);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchReflexJobs = async () => {
-    try {
-      const allJobs = await api.listCronJobs();
-      setReflexJobs(Array.isArray(allJobs) ? allJobs.filter((job: any) => job.meta?.category === 'infra') : []);
-    } catch (err) { console.error(err); }
-  };
-
-  const runReflexJob = async (jobId: string) => {
-    try {
-      await api.triggerCronJob(jobId);
-      message.success("Reflex triggered.");
-    } catch (err) { message.error("Failed."); }
-  };
-
   const sendMessage = async () => {
     if (!inputValue.trim() || isSending) return;
-    const userMsg = { role: 'user', content: inputValue };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', content: inputValue }]);
+    const currentInput = inputValue;
     setInputValue('');
     setIsSending(true);
 
     try {
-      const response = await fetch(getApiUrl("/agent/process"), {
+      await api.request("/agent/process", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${getApiToken()}`
-        },
         body: JSON.stringify({
-          input: [{ role: 'user', content: [{ type: 'text', text: inputValue }] }],
+          input: [{
+            role: 'user',
+            content: [{ type: 'text', text: currentInput }]
+          }],
           session_id: "infra-governance",
           user_id: "architect",
           channel: "console",
           stream: false 
         })
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const rawText = await response.text();
-      try {
-        const data = JSON.parse(rawText);
-        const reply = data.output ? data.output[0] : data;
-        const txt = typeof reply.content === 'string' ? reply.content : JSON.stringify(reply.content);
-        setMessages(prev => [...prev, { role: 'system', content: String(txt) }]);
-      } catch(e) { /* silent ignore Beacon update as polling will catch it */ }
-    } catch (err: any) {
-      message.error(err.message || "Failed to reach Brain.");
+      setTimeout(fetchChatHistory, 1000);
+    } catch (err) {
+      message.error("Link Broken: Neural connection failed.");
     } finally {
       setIsSending(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" tip="Awakening Infra Agent..." />
+  const renderTab1 = () => (
+    <Card 
+      title={<span><Activity size={16} style={{marginRight:8, color:'#2563eb'}}/>Operational State</span>} 
+      style={{borderRadius:16, border:'1px solid #e2e8f0', background: '#ffffff'}}
+      bodyStyle={{padding: 24}}
+    >
+      <Row gutter={16}>
+        <Col span={8}>
+          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+            <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '11px', display:'flex', alignItems:'center', gap:4 }}>
+              <Activity size={12}/> Checkpoint
+            </div>
+            <div style={{ color: '#1e2937', fontSize: '16px', fontWeight: 800, marginTop: 8 }}>
+              {infraData?.state?.last_checkpoint || "N/A"}
+            </div>
+          </div>
+        </Col>
+        <Col span={8}>
+          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+            <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '11px', display:'flex', alignItems:'center', gap:4 }}>
+              <Zap size={12}/> Current Focus
+            </div>
+            <div style={{ color: '#1e2937', fontSize: '16px', fontWeight: 800, marginTop: 8 }}>
+              {infraData?.state?.current_task || "Idle"}
+            </div>
+          </div>
+        </Col>
+        <Col span={8}>
+          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+            <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '11px', display:'flex', alignItems:'center', gap:4 }}>
+              <Clock size={12}/> Brain Clock
+            </div>
+            <div style={{ color: '#1e2937', fontSize: '16px', fontWeight: 800, marginTop: 8 }}>
+              {infraData?.state?.timestamp || "N/A"}
+            </div>
+          </div>
+        </Col>
+      </Row>
+      
+      <Divider orientation="left" style={{marginTop:32}}>Evolution Logs</Divider>
+      <List 
+        size="small" 
+        dataSource={infraData?.evolution_logs || []} 
+        renderItem={(log: any) => (
+          <List.Item style={{border:'none', padding:'8px 0', textAlign:'left'}}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, textAlign:'left', width:'100%' }}>
+              <Tag color="blue" style={{borderRadius:4}}>{log.time || 'N/A'}</Tag> 
+              <Text strong style={{marginRight:8}}>{log.action || 'Unknown'}</Text>
+              <Text type="secondary">{log.correction || ''}</Text>
+            </div>
+          </List.Item>
+        )} 
+        locale={{ emptyText: "No logs recovered." }}
+      />
+    </Card>
+  );
+
+  const renderTab2 = () => (
+    <Card 
+      title={<span><BookOpen size={16} style={{marginRight:8, color:'#2563eb'}}/>Soul Constitution</span>} 
+      style={{borderRadius:16, border:'1px solid #e2e8f0', background: '#ffffff'}}
+    >
+      <List 
+        dataSource={infraData?.soul?.principles || []} 
+        renderItem={(item: string) => (
+          <List.Item style={{padding: '16px 0', borderBottom: '1px solid #f1f5f9', textAlign:'left'}}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12, textAlign:'left', width:'100%' }}>
+              <span style={{color:'#2563eb', fontWeight:'bold', lineHeight:1.5}}>⚡</span> 
+              <Text style={{fontSize: 14, flex:1}}>{item}</Text>
+            </div>
+          </List.Item>
+        )} 
+        locale={{ emptyText: "Constitutional principles not found." }}
+      />
+    </Card>
+  );
+
+  const renderTab3 = () => (
+    <Row gutter={24}>
+      <Col span={16}>
+        <Card 
+          title={<span><Zap size={16} style={{marginRight:8, color:'#2563eb'}}/>Evolution Backlog</span>} 
+          style={{borderRadius:16, border:'1px solid #e2e8f0', background: '#ffffff'}}
+        >
+          <div style={{ 
+            background:'#f1f5f9', 
+            padding:20, 
+            borderRadius:12, 
+            fontFamily:'"Fira Code", monospace', 
+            whiteSpace:'pre-wrap', 
+            fontSize:12, 
+            minHeight:400,
+            maxHeight: 600,
+            overflowY: 'auto',
+            border: '1px solid #e2e8f0'
+          }}>
+            {infraData?.evolution_backlog || "DTHBH Roadmap is ready for expansion."}
+          </div>
+        </Card>
+      </Col>
+      <Col span={8}>
+        <Card 
+          title={<span><Cpu size={16} style={{marginRight:8, color:'#2563eb'}}/>Housekeeping Jobs</span>} 
+          style={{borderRadius:16, border:'1px solid #e2e8f0', background: '#ffffff'}}
+        >
+          <List 
+            dataSource={reflexJobs} 
+            renderItem={(job: any) => (
+              <List.Item 
+                style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0'}}
+              >
+                <div>
+                  <Text strong block>{job.name}</Text>
+                  <Text type="secondary" style={{fontSize:11}}>Trigger agent reflex</Text>
+                </div>
+                <Button 
+                  type="primary" 
+                  shape="circle"
+                  size="small" 
+                  icon={<Play size={10} fill="currentColor"/>} 
+                  onClick={() => runReflexJob(job.id)} 
+                />
+              </List.Item>
+            )} 
+            locale={{ emptyText: "No active reflex jobs." }}
+          />
+        </Card>
+      </Col>
+    </Row>
+  );
+
+  const renderTab4 = () => (
+    <div className="terminal-container" style={{ 
+      display:'flex', 
+      flexDirection:'column', 
+      height:'calc(100vh - 280px)', 
+      background:'#fff', 
+      border:'1px solid #e2e8f0', 
+      borderRadius:12, 
+      overflow:'hidden',
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+      textAlign:'left'
+    }}>
+      <div className="terminal-header" style={{ padding:'8px 16px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{width:10, height:10, borderRadius:'50%', background:'#ff5f56'}}/>
+        <div style={{width:10, height:10, borderRadius:'50%', background:'#ffbd2e'}}/>
+        <div style={{width:10, height:10, borderRadius:'50%', background:'#27c93f'}}/>
+        <span style={{fontSize:11, color:'#64748b', marginLeft:8, fontFamily:'monospace'}}>infra-governance-link</span>
       </div>
-    );
-  }
-
-  // Final fallback for data
-  const data = infraData || { state: {}, soul: { principles: [] }, evolution_logs: [] };
-
-  const RenderStatistic = ({ title, value }: { title: string, value: string }) => (
-    <div style={{ padding: '4px 0' }}>
-      <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '12px', fontWeight: 500 }}>{title}</div>
-      <div style={{ color: '#1e2937', fontSize: '18px', fontWeight: 700 }}>{value || "N/A"}</div>
+      <div className="terminal-body" ref={scrollRef} style={{ flex:1, padding:24, overflowY:'auto', fontFamily:'"Fira Code", monospace', background:'#fff', textAlign:'left' }}>
+        {messages.length === 0 && <div style={{color:'#999'}}>No messages in session</div>}
+        {messages.map((msg, i) => {
+          console.log("[IC] Rendering msg", i, msg);
+          return (
+          <div key={i} style={{ marginBottom: 16, textAlign:'left' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+              <Text strong style={{ opacity: 0.4, fontSize:11 }}>{(msg.role || 'assistant') === 'user' ? 'root@asf # ' : '>> '}</Text>
+              <Text style={{ opacity: 0.2, fontSize:10 }}>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}</Text>
+            </div>
+            <div style={{ 
+              marginLeft: 0, 
+              background: (msg.role || 'assistant') === 'user' ? '#f8fafc' : 'transparent',
+              padding: (msg.role || 'assistant') === 'user' ? '8px 12px' : '0 12px',
+              borderRadius: 8,
+              borderLeft: (msg.role || 'assistant') === 'user' ? '2px solid #2563eb' : '2px solid #e2e8f0',
+              color: '#1e2937',
+              textAlign:'left'
+            }}>
+              {String(msg.content || '')}
+            </div>
+          </div>
+        )})}
+        {isSending && (
+          <div style={{ opacity: 0.5 }}>
+            <Text strong style={{ fontSize:11 }}>{">> "}</Text>
+            <div style={{ marginLeft: 12, borderLeft: '2px solid #2563eb', paddingLeft: 12 }}>
+              <Spin size="small" /> Processing instruction...
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="terminal-input-area" style={{ padding:16, background:'#f8fafc', borderTop:'1px solid #e2e8f0', textAlign:'left' }}>
+        <Input 
+          value={inputValue} 
+          onChange={e => setInputValue(e.target.value)} 
+          onPressEnter={sendMessage} 
+          placeholder="Instruct the Brain..." 
+          autoFocus 
+          variant="borderless"
+          prefix={<ChevronRight size={14} color="#2563eb"/>} 
+          disabled={isSending} 
+          style={{ padding:0, textAlign:'left' }}
+        />
+      </div>
     </div>
   );
 
-  const items = [
-    {
-      key: '1',
-      label: <span className="tab-label"><LayoutDashboard size={14}/>Dashboard</span>,
-      children: (
-        <Card title="Operating State" className="ic-card">
-          <Row gutter={48}>
-            <Col span={8}><RenderStatistic title="Last Checkpoint" value={data.state?.last_checkpoint} /></Col>
-            <Col span={8}><RenderStatistic title="Current Focus" value={data.state?.current_task} /></Col>
-            <Col span={8}><RenderStatistic title="State Sync" value={data.state?.timestamp} /></Col>
-          </Row>
-          <Divider />
-          <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
-            <Title level={5}>Real-time Evolution Logs</Title>
-            <List
-              size="small"
-              dataSource={data.evolution_logs || []}
-              renderItem={(log: any) => (
-                <List.Item><Text type="secondary">{log.time || "???"}:</Text> {log.action || "Idle"}</List.Item>
-              )}
-            />
-          </div>
-        </Card>
-      ),
-    },
-    {
-      key: '2',
-      label: <span className="tab-label"><BookOpen size={14}/>Constitution</span>,
-      children: (
-        <Card title="Soul & Core Principles" className="ic-card">
-          <div className="soul-hero">
-            <Title level={4}>{data.soul?.identity || "ASF Infra Agent"}</Title>
-            <Text type="secondary">Shared Consciousness v{data.soul?.version || "1.0"}</Text>
-          </div>
-          <List
-            dataSource={data.soul?.principles || []}
-            renderItem={(item: string) => (
-              <List.Item className="soul-item">
-                <span className="bullet">⚡</span> {item}
-              </List.Item>
-            )}
-          />
-        </Card>
-      ),
-    },
-    {
-      key: '3',
-      label: <span className="tab-label"><Zap size={14}/>Reflex</span>,
-      children: (
-        <Row gutter={24}>
-          <Col span={16}>
-            <Card title="Evolution Backlog" className="ic-card">
-              <pre className="backlog-viewer">{data.evolution_backlog || "Standby."}</pre>
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card title="Housekeeping Jobs" className="ic-card">
-              <List
-                dataSource={reflexJobs}
-                renderItem={job => (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <Text strong>{job.name}</Text>
-                    <Button type="primary" size="small" onClick={() => runReflexJob(job.id)}>Run</Button>
-                  </div>
-                )}
-              />
-            </Card>
-          </Col>
-        </Row>
-      ),
-    },
-    {
-      key: '4',
-      label: <span className="tab-label"><Terminal size={14}/>Terminal</span>,
-      children: (
-        <div className="terminal-container">
-          <div className="terminal-header">
-            <div className="term-dots"><span className="dot red"></span><span className="dot yellow"></span><span className="dot green"></span></div>
-            <span className="term-title">architect@asf:~ (Soul Bridge)</span>
-          </div>
-          <div className="terminal-body" ref={scrollRef}>
-            {messages.map((msg, i) => (
-              <div key={i} className={`msg-row role-${msg.role}`}>
-                <div className="msg-header">
-                  <span className="msg-prefix">{msg.role === 'user' ? 'root@asf # ' : msg.role === 'system' ? '>> ' : '[INFRA] > '}</span>
-                </div>
-                <div className="msg-content">{msg.content}</div>
-              </div>
-            ))}
-            {isSending && <div className="msg-row role-system">{'>>'} PROCESSING...</div>}
-          </div>
-          <div className="terminal-input-area">
-            <Input 
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onPressEnter={sendMessage}
-              placeholder="Enter command..."
-              autoFocus
-              className="term-input"
-              prefix={<ChevronRight size={14} color="#2563eb"/>}
-              disabled={isSending}
-            />
-          </div>
-        </div>
-      ),
-    }
-  ];
+  if (loading || !infraData) return (
+    <div style={{ display: 'flex', flexDirection:'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background:'#f8fafc' }}>
+      <Spin size="large" />
+      <Text style={{marginTop:16, color:'#64748b'}}>Establishing Soul Bridge...</Text>
+    </div>
+  );
 
   return (
-    <div className="ic-container">
-      <div className="ic-header">
-        <Title level={2}><Cpu size={28} color="#2563eb" /> Infra Agent Center</Title>
+    <div className="ic-container" style={{ padding: '32px', background: '#f8fafc', minHeight: '100vh' }}>
+      <div className="ic-header" style={{ marginBottom: 32, display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
+        <div>
+          <Title level={2} style={{ margin: 0, display:'flex', alignItems:'center' }}>
+            <Cpu size={32} color="#2563eb" style={{ marginRight: 12 }} /> 
+            Infra Center
+          </Title>
+          <Text type="secondary" style={{fontSize:14}}>Digital Humanities Infrastructure Governance Matrix</Text>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <Tag color="green" style={{borderRadius:12, padding:'2px 12px'}}>Neural Link Active</Tag>
+          <div style={{fontSize:10, color:'#999', marginTop:4}}>
+            Debug: {infraData ? 'data OK' : 'NO DATA'} | Jobs: {reflexJobs.length} | Msgs: {messages.length}
+          </div>
+        </div>
       </div>
-      <Tabs defaultActiveKey="4" items={items} className="ic-tabs-main" />
-      <style>{`
-        .ic-container { padding: 24px; background: #f8fafc; min-height: 100vh; font-family: -apple-system, sans-serif; }
-        .tab-label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
-        .ic-card { border-radius: 12px; border: 1px solid #e2e8f0; background: white; }
-        .soul-hero { background: #eff6ff; padding: 16px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #dbeafe; }
-        .soul-item { padding: 6px 0 !important; border: none !important; font-size: 13px; }
-        .bullet { margin-right: 8px; color: #2563eb; }
-        .backlog-viewer { padding: 16px; background: #f1f5f9; border-radius: 8px; font-size: 12px; color: #334155; border: 1px solid #e2e8f0; white-space: pre-wrap; font-family: monospace; }
-        
-        .terminal-container { display: flex; flex-direction: column; height: calc(100vh - 220px); border-radius: 10px; overflow: hidden; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .terminal-header { background: #f1f5f9; padding: 10px 16px; display: flex; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        .term-dots { display: flex; gap: 6px; margin-right: 16px; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; }
-        .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
-        .term-title { color: #64748b; font-size: 12px; font-family: -apple-system, sans-serif; font-weight: 500; }
-        
-        .terminal-body { flex: 1; padding: 20px; overflow-y: auto; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; color: #1f2937; line-height: 1.6; background: #ffffff; }
-        .msg-row { margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-        .msg-header { margin-bottom: 4px; }
-        .role-user { color: #2563eb; }
-        .role-assistant { color: #059669; }
-        .role-system { color: #7c3aed; opacity: 0.8; }
-        .msg-prefix { font-weight: bold; font-size: 13px; }
-        .msg-content { white-space: pre-wrap; word-break: break-all; padding-left: 12px; border-left: 2px solid #e2e8f0; }
-        
-        .terminal-input-area { background: #f8fafc; padding: 12px 16px; border-top: 1px solid #e2e8f0; }
-        .term-input { background: transparent !important; border: none !important; color: #1f2937 !important; font-family: monospace !important; font-weight: 500; }
-        .term-input:focus { box-shadow: none !important; }
-      `}</style>
+
+      <Tabs 
+        defaultActiveKey="1" 
+        size="large"
+        items={[
+          { 
+            key: '1', 
+            label: <span style={{display:'flex', alignItems:'center', gap:8}}><LayoutDashboard size={16}/>Operational Dashboard</span>, 
+            children: renderTab1() 
+          },
+          { 
+            key: '2', 
+            label: <span style={{display:'flex', alignItems:'center', gap:8}}><BookOpen size={16}/>Soul Constitution</span>, 
+            children: renderTab2() 
+          },
+          { 
+            key: '3', 
+            label: <span style={{display:'flex', alignItems:'center', gap:8}}><Zap size={16}/>Daemon Agents</span>, 
+            children: renderTab3() 
+          },
+          { 
+            key: '4', 
+            label: <span style={{display:'flex', alignItems:'center', gap:8}}><Terminal size={16}/>Neural Link</span>, 
+            children: renderTab4() 
+          }
+        ]} 
+      />
     </div>
   );
 };

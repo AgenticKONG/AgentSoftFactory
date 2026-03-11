@@ -69,6 +69,12 @@ export function RemoteProviderCard({
   const hasModels = totalCount > 0;
   const isAvailable = isConfigured && hasModels;
 
+  const authTag = isConfigured ? (
+    <Tag color="success" style={{ marginLeft: 8, fontSize: 11 }}>Authorized</Tag>
+  ) : (
+    <Tag color="error" style={{ marginLeft: 8, fontSize: 11 }}>Unauthorized</Tag>
+  );
+
   const providerTag = provider.is_custom ? (
     <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>
       {t("models.custom")}
@@ -114,6 +120,7 @@ export function RemoteProviderCard({
           <span className={styles.cardName}>
             {provider.name}
             {providerTag}
+            {authTag}
           </span>
           <div className={styles.statusContainer}>
             <span

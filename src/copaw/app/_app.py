@@ -435,16 +435,14 @@ app = FastAPI(
     openapi_url="/openapi.json" if DOCS_ENABLED else None,
 )
 
-# Apply CORS middleware if CORS_ORIGINS is set
-if CORS_ORIGINS:
-    origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Apply CORS middleware - Force enabled for all origins in development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Console static dir: env, or copaw package data (console), or cwd.

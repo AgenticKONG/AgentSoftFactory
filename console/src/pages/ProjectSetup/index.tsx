@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, Button, Card, message, Typography } from 'antd';
+import { Form, Input, Select, Button, Card, message, Typography, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, Settings2 } from 'lucide-react';
 
@@ -84,19 +84,38 @@ const ProjectSetup = () => {
             <Input.TextArea rows={3} placeholder="Describe the goal of this project..." />
           </Form.Item>
 
-          <Form.Item label="Team Template" name="template" rules={[{ required: true }]}>
-            <Select 
-              placeholder="Select a gene template..."
-              options={templates.map(t => ({
-                value: t.id,
-                label: (
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{t.name}</div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>{t.description}</div>
-                  </div>
-                )
-              }))} 
-            />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Level (演进等级)" name="level" rules={[{ required: true }]}>
+                <Select placeholder="Select evolution level">
+                  <Select.Option value="L1">L1: Atomic (原子测试)</Select.Option>
+                  <Select.Option value="L2">L2: Module (模块集成)</Select.Option>
+                  <Select.Option value="L3">L3: Logic (复杂逻辑)</Select.Option>
+                  <Select.Option value="L4">L4: System (系统闭环)</Select.Option>
+                  <Select.Option value="L5">L5: Narrative (全局叙事)</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Category (业务分类)" name="category" rules={[{ required: true }]}>
+                <Select placeholder="Select business category">
+                  <Select.Option value="DATA">DATA (数据挖掘/清洗)</Select.Option>
+                  <Select.Option value="BACK">BACK (后端/API)</Select.Option>
+                  <Select.Option value="FRONT">FRONT (前端组件)</Select.Option>
+                  <Select.Option value="VIZ">VIZ (可视化/LifeRiver)</Select.Option>
+                  <Select.Option value="NARR">NARR (内容叙事/策展)</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="Team Structure (团队架构)" name="team_structure" rules={[{ required: true }]}>
+            <Select placeholder="Select the size of your team">
+              <Select.Option value="T1">T1: Duo (PM + DEV)</Select.Option>
+              <Select.Option value="T2">T2: Trio (PM + DEV + QA)</Select.Option>
+              <Select.Option value="T3">T3: Quad (PM + VD + DEV + QA)</Select.Option>
+              <Select.Option value="T4">T4: Elite (PM + VD + DEV + QA + Infra)</Select.Option>
+            </Select>
           </Form.Item>
 
           <Form.Item style={{ marginTop: '40px' }}>

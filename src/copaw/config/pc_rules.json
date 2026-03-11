@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "description": "Project Center Governance Rules - Digitized from ProjectCenter_SPEC.md",
+  "categories": {
+    "FRONT": { "id": "C1", "sovereign_agent": "DEV", "min_level": "L1" },
+    "BACK": { "id": "C2", "sovereign_agent": "DEV", "min_level": "L2" },
+    "DATA": { "id": "C3", "sovereign_agent": "DEV", "min_level": "L1" },
+    "VIZ": { "id": "C4", "sovereign_agent": "VD", "min_level": "L2" },
+    "NARR": { "id": "C5", "sovereign_agent": "DEV", "min_level": "L1" },
+    "INFRA": { "id": "C6", "sovereign_agent": "IA", "min_level": "L3" }
+  },
+  "levels": {
+    "L1": { "rank": 1, "default_max_loops": 3 },
+    "L2": { "rank": 2, "default_max_loops": 5 },
+    "L3": { "rank": 3, "default_max_loops": 10 },
+    "L4": { "rank": 4, "default_max_loops": 15 },
+    "L5": { "rank": 5, "default_max_loops": 20 }
+  },
+  "teams": {
+    "T1": ["PM", "DEV"],
+    "T2": ["PM", "DEV", "QA"],
+    "T3": ["PM", "DEV", "VD", "QA"],
+    "T4": ["PM", "DEV", "VD", "QA", "Human"],
+    "T5": ["IA", "JQA", "SQA"]
+  },
+  "processes": {
+    "P1": { "name": "Direct", "stages": ["PM", "DEV"] },
+    "P2": { "name": "Verified Loop", "stages": ["PM", "DEV", "QA"] },
+    "P3": { "name": "Visual Gate", "stages": ["PM", "VD", "DEV", "QA"] },
+    "P4": { "name": "Review Plus", "stages": ["PM", "VD", "Human", "DEV", "QA"] },
+    "P5": { "name": "INFRA Core", "stages": ["IA", "JQA", "SQA"] }
+  },
+  "constraints": {
+    "hard_rules": [
+      {
+        "condition": { "category": "INFRA" },
+        "must_have": { "min_level": "L3", "dev": "IA", "process": "P5", "team": "T5" },
+        "error_msg": "INFRA projects must be L3+ and use IA Sovereign P5 workflow."
+      },
+      {
+        "condition": { "category": "VIZ", "min_level": "L3" },
+        "must_have": { "team_includes": ["VD"], "min_process": "P3" },
+        "error_msg": "L3+ VIZ projects require VD and P3 Visual Gate."
+      },
+      {
+        "condition": { "level": "L5" },
+        "must_have": { "min_process": "P4", "team_includes": ["SQA", "Human"] },
+        "error_msg": "L5 Architecture Core requires P4/P5 and Human/SQA Audit."
+      }
+    ],
+    "auto_upgrades": [
+      {
+        "trigger": { "category": "VIZ", "level": "L3" },
+        "apply": { "team": "T3", "process": "P3" }
+      },
+      {
+        "trigger": { "level": "L5" },
+        "apply": { "team": "T4", "process": "P4" }
+      }
+    ]
+  },
+  "loop_configs": {
+    "P2": { "QA-DEV": 5 },
+    "P3": { "VD-DEV": 5, "QA-DEV": 3 },
+    "P4": { "VD-DEV": 5, "QA-DEV": 3 },
+    "P5": { "JQA-IA": { "L3": 10, "L4": 15, "L5": 20 }, "SQA-IA": 3 }
+  }
+}
