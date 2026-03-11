@@ -4,6 +4,7 @@ export interface SkillSpec {
   source: string;
   path: string;
   enabled?: boolean;
+  skill_type: string;  // "builtin" | "specialized"
 }
 
 export interface HubSkillSpec {

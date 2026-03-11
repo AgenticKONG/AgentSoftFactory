@@ -45,6 +45,7 @@ class SkillInfo(BaseModel):
     path: str
     references: dict[str, Any] = {}
     scripts: dict[str, Any] = {}
+    skill_type: str = "builtin"  # "builtin" or "specialized"
 
 
 def get_builtin_skills_dir() -> Path:
@@ -394,6 +395,19 @@ def _read_skills_from_dir(
             if scripts_dir.exists() and scripts_dir.is_dir():
                 scripts = _build_directory_tree(scripts_dir)
 
+            # Parse skill_type from metadata (default to source for backward compatibility)
+            skill_type = "builtin"
+            try:
+                post = frontmatter.loads(content)
+                metadata = post.get("metadata", {})
+                # Check metadata.type first, then default to source
+                if isinstance(metadata, dict):
+                    skill_type = metadata.get("type", source)
+                else:
+                    skill_type = source
+            except Exception:
+                skill_type = source
+
             skills.append(
                 SkillInfo(
                     name=skill_dir.name,
@@ -402,6 +416,7 @@ def _read_skills_from_dir(
                     path=str(skill_dir),
                     references=references,
                     scripts=scripts,
+                    skill_type=skill_type,
                 ),
             )
         except Exception as e:
