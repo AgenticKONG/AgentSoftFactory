@@ -55,8 +55,8 @@ const AgentProfile = () => {
       if (modelsRes.ok) setAvailableModels(await modelsRes.json());
       if (skillsRes.ok) {
         const allSkills = await skillsRes.json();
-        // Only allow selecting 'customized' skills. 'builtin' are considered essential.
-        setAvailableSkills(allSkills.filter((s: any) => s.source === 'customized'));
+        // Only show specialized skills in Agent Profile (builtin are auto-loaded)
+        setAvailableSkills(allSkills.filter((s: any) => s.skill_type === 'specialized'));
       }
       if (mcpRes.ok) setAvailableMCPs(await mcpRes.json());
     } catch (err) {
