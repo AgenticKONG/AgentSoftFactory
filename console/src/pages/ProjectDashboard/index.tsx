@@ -1,18 +1,10 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Button, List, Select, message, Spin, Space, Divider, Typography, Input, Row, Col, Modal, Tooltip, Alert, Form, InputNumber, Empty } from 'antd';
-import { Users, Shield, Zap, Rocket, Save, ChevronLeft, Trash2, Settings2, Activity, CheckCircle2, AlertTriangle, ExternalLink, Cpu } from 'lucide-react';
+import { Card, Descriptions, Tag, Button, List, Select, message, Spin, Space, Divider, Typography, Input, Row, Col, Modal, Tooltip, Alert, Form, InputNumber, Empty, Dropdown } from 'antd';
+import { Users, Shield, Zap, Rocket, Save, ChevronLeft, Trash2, Settings2, Activity, CheckCircle2, AlertTriangle, ExternalLink, Cpu, Archive } from 'lucide-react';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-const TEAM_DEFS: Record<string, any[]> = {
-  "T1": [{ role: "PM" }, { role: "DEV" }],
-  "T2": [{ role: "PM" }, { role: "DEV" }, { role: "QA" }],
-  "T3": [{ role: "PM" }, { role: "VD" }, { role: "DEV" }, { role: "QA" }],
-  "T4": [{ role: "PM" }, { role: "VD" }, { role: "DEV" }, { role: "QA" }, { role: "Infra" }],
-  "T5": [{ role: "DEV", id: "infra-agent", name: "Infra Agent (Me)" }, { role: "Junior-QA", id: "llama3.2" }, { role: "Senior-QA", id: "glm-4.7" }]
-};
 
 const LEGACY_MAP: Record<string, string> = { "standard-v1": "T2", "viz-d3-v1": "T3" };
 
@@ -25,12 +17,19 @@ const ProjectDashboard = () => {
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [rules, setRules] = useState<any>(null);
   
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [cloneForm] = Form.useForm();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [archiveReason, setArchiveReason] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const normalizeData = useCallback((data: any) => {
     if (!data) return null;
@@ -57,11 +56,58 @@ const ProjectDashboard = () => {
 
   const fetchSupportData = useCallback(async () => {
     try {
-      const [a, m] = await Promise.all([fetch('/api/asf/market/list'), fetch('/api/asf/models/list')]);
+      const [a, m, r] = await Promise.all([
+        fetch('/api/asf/market/list'), 
+        fetch('/api/asf/models/list'),
+        fetch('/api/asf/pc/rules')
+      ]);
       if (a.ok) setAvailableAgents(await a.json());
       if (m.ok) setAvailableModels(await m.json());
+      if (r.ok) setRules(await r.json());
     } catch (err) {}
   }, []);
+
+  const TEAM_DEFS = useMemo(() => {
+    if (!rules || !rules.teams) {
+      return {
+        "T1": [{ role: "PM" }, { role: "DEV" }],
+        "T2": [{ role: "PM" }, { role: "DEV" }, { role: "QA" }],
+        "T3": [{ role: "PM" }, { role: "VD" }, { role: "DEV" }, { role: "QA" }],
+        "T4": [{ role: "PM" }, { role: "VD" }, { role: "DEV" }, { role: "QA" }, { role: "Infra" }],
+        "T5": [{ role: "DEV", id: "infra-agent", name: "Infra Agent (Me)" }, { role: "Junior-QA", id: "llama3.2" }, { role: "Senior-QA", id: "glm-4.7" }]
+      };
+    }
+    return rules.teams;
+  }, [rules]);
+
+  const teamOptions = useMemo(() => {
+    if (!rules || !rules.teams) return [];
+    return Object.keys(rules.teams).map(t => ({ value: t, label: t }));
+  }, [rules]);
+
+  const processOptions = useMemo(() => {
+    if (!rules || !rules.processes) return [];
+    return Object.keys(rules.processes).map(p => ({ value: p, label: `${p}: ${rules.processes[p].name}` }));
+  }, [rules]);
+
+  const categoryOptions = useMemo(() => {
+    if (!rules || !rules.categories) return ['FRONT', 'BACK', 'DATA', 'VIZ', 'NARR', 'INFRA'];
+    return Object.keys(rules.categories).map(c => ({ value: c, label: c }));
+  }, [rules]);
+
+  const levelOptions = useMemo(() => {
+    if (!rules || !rules.levels) return [];
+    const category = project?.meta?.category;
+    let minRank = 1;
+    if (category === 'INFRA') {
+      minRank = 3;
+    } else if (category === 'BACK' || category === 'VIZ') {
+      minRank = 2;
+    }
+    return Object.keys(rules.levels)
+      .filter(l => (rules.levels[l].rank || 0) >= minRank)
+      .map(l => ({ value: l, label: l }));
+  }, [rules, project?.meta?.category]);
 
   useEffect(() => {
     const init = async () => { setLoading(true); await Promise.all([loadProject(), fetchSupportData()]); setLoading(false); };
@@ -108,6 +154,54 @@ const ProjectDashboard = () => {
     } catch (err) { message.error("Launch Error."); } finally { setLaunching(false); }
   };
 
+  const handleDelete = async () => {
+    if (deleteConfirmName !== projectId) {
+      message.error("项目名称不匹配，删除已取消");
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/asf/projects/${projectId}`, { method: 'DELETE' });
+      if (res.ok) {
+        message.success("项目已删除");
+        navigate('/projects');
+      } else {
+        const err = await res.json();
+        message.error(err.detail || "删除失败");
+      }
+    } catch (err) {
+      message.error("删除请求失败");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setDeleteConfirmName('');
+    }
+  };
+
+  const handleArchive = async () => {
+    setIsArchiving(true);
+    try {
+      const res = await fetch(`/api/asf/projects/${projectId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: archiveReason })
+      });
+      if (res.ok) {
+        message.success("项目已归档");
+        navigate('/projects');
+      } else {
+        const err = await res.json();
+        message.error(err.detail || "归档失败");
+      }
+    } catch (err) {
+      message.error("归档请求失败");
+    } finally {
+      setIsArchiving(false);
+      setIsArchiveModalOpen(false);
+      setArchiveReason(null);
+    }
+  };
+
   if (loading || !project) return <div style={{ padding: 100, textAlign: 'center' }}><Spin size="large" /></div>;
 
   return (
@@ -117,6 +211,14 @@ const ProjectDashboard = () => {
         <Space>
           {isDirty ? <Tag color="orange" icon={<Activity size={12}/>}>Local Changes</Tag> : <Tag color="success" icon={<CheckCircle2 size={12}/>}>Synced</Tag>}
           <Button type="primary" icon={<Save size={16}/>} onClick={handleSaveAll} loading={saving} disabled={!isDirty}>Commit Config</Button>
+          <Button type="default" icon={<Archive size={16}/>} onClick={() => setIsArchiveModalOpen(true)}>Archive</Button>
+          <Dropdown menu={{
+            items: [
+              { key: 'delete', label: 'Permanent Delete', icon: <Trash2 size={14}/>, danger: true, onClick: () => setIsDeleteModalOpen(true) }
+            ]
+          }} trigger={['click']}>
+            <Button type="text" danger icon={<Trash2 size={16}/>} style={{ marginLeft: '8px' }} />
+          </Dropdown>
         </Space>
       </div>
 
@@ -131,14 +233,14 @@ const ProjectDashboard = () => {
                     Modal.confirm({ 
                       onOk: () => updateState(p => ({...p, team: {...p.team, structure:v, agents: JSON.parse(JSON.stringify(TEAM_DEFS[v]))}, meta: {...p.meta, process: processId}}))
                     })}}
-                    options={Object.keys(TEAM_DEFS).map(k => ({value:k, label:k}))} />
+                    options={teamOptions.map(k => ({value:k.value, label:k.label}))} />
                 </Col>
                 <Col span={6}><Text strong style={{fontSize:10}}>PROCESS (P)</Text><br/>
                   <Select value={project.meta.process} style={{width:'100%'}} onChange={v => {
                     const teamId = v.replace('P', 'T');
                     updateState(p => ({...p, meta: {...p.meta, process: v}, team: {...p.team, structure: TEAM_DEFS[teamId] ? teamId : p.team.structure}}));
                   }}
-                    options={[{value:'P1',label:'P1: Linear'},{value:'P2',label:'P2: Agile'},{value:'P3',label:'P3: Visual'},{value:'P4',label:'P4: Review'},{value:'P5',label:'P5: Infra-Audit'}]} />
+                    options={processOptions.map(p => ({value:p.value, label:p.label}))} />
                 </Col>
                 <Col span={6}><Text strong style={{fontSize:10}}>JQA LIMIT</Text><br/>
                   <InputNumber min={1} value={project.meta.max_loops || 10} onChange={v => updateState(p => ({...p, meta: {...p.meta, max_loops: v}}))} />
@@ -200,7 +302,7 @@ const ProjectDashboard = () => {
                       updateState(p => ({...p, meta: {...p.meta, category: v}}));
                     }
                   }} 
-                  options={['DATA','BACK','FRONT','VIZ','NARR','INFRA'].map(c => ({value:c, label:c}))} 
+                  options={categoryOptions.map(c => ({value:c.value, label:c.label}))} 
                 />
               </Descriptions.Item>
               <Descriptions.Item label="Level">
@@ -222,7 +324,7 @@ const ProjectDashboard = () => {
                       updateState(p => ({...p, meta: {...p.meta, level: v}}));
                     }
                   }} 
-                  options={['L1','L2','L3','L4','L5'].map(l => ({value:l, label:l}))} 
+                  options={levelOptions.map(l => ({value:l.value, label:l.label}))} 
                 />
               </Descriptions.Item>
             </Descriptions>
@@ -237,6 +339,84 @@ const ProjectDashboard = () => {
         <Form form={cloneForm} layout="vertical">
           <Form.Item name="model" label="Model Override"><Select options={availableModels.map(m => ({value: m.id, label: m.name}))} /></Form.Item>
           <Form.Item name="dna_prompt" label="Local DNA Overwrite"><TextArea rows={8} /></Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={<span style={{ color: '#ef4444' }}><AlertTriangle size={20} style={{ marginRight: 8 }} />危险操作确认</span>}
+        open={isDeleteModalOpen}
+        onCancel={() => { setIsDeleteModalOpen(false); setDeleteConfirmName(''); }}
+        footer={[
+          <Button key="cancel" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmName(''); }}>
+            取消
+          </Button>,
+          <Button
+            key="delete"
+            danger
+            type="primary"
+            loading={isDeleting}
+            disabled={deleteConfirmName !== projectId}
+            onClick={handleDelete}
+          >
+            确认删除
+          </Button>
+        ]}
+      >
+        <Alert
+          type="error"
+          showIcon
+          icon={<AlertTriangle size={16} />}
+          message="此操作不可恢复"
+          description="删除项目将永久移除所有相关数据，包括项目文件、历史记录和配置。"
+          style={{ marginBottom: 16 }}
+        />
+        <div style={{ marginTop: 16 }}>
+          <Text strong>请输入项目名称 "<code>{projectId}</code>" 以确认删除：</Text>
+          <Input
+            style={{ marginTop: 8 }}
+            placeholder={`输入 "${projectId}" 确认`}
+            value={deleteConfirmName}
+            onChange={e => setDeleteConfirmName(e.target.value)}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        title={<span style={{ color: '#f59e0b' }}><Archive size={20} style={{ marginRight: 8 }} />归档项目</span>}
+        open={isArchiveModalOpen}
+        onCancel={() => { setIsArchiveModalOpen(false); setArchiveReason(null); }}
+        footer={[
+          <Button key="cancel" onClick={() => { setIsArchiveModalOpen(false); setArchiveReason(null); }}>
+            取消
+          </Button>,
+          <Button
+            key="archive"
+            type="primary"
+            loading={isArchiving}
+            onClick={handleArchive}
+          >
+            确认归档
+          </Button>
+        ]}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text>归档项目 "<strong>{projectId}</strong>" 后，它将从项目列表中隐藏，但可以随时恢复。</Text>
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="归档原因（可选）">
+            <Select
+              placeholder="选择归档原因"
+              value={archiveReason}
+              onChange={setArchiveReason}
+              allowClear
+              options={[
+                { value: 'completed', label: '已完成' },
+                { value: 'paused', label: '暂停/搁置' },
+                { value: 'merged', label: '已合并到其他项目' },
+                { value: 'other', label: '其他' }
+              ]}
+            />
+          </Form.Item>
         </Form>
       </Modal>
     </div>

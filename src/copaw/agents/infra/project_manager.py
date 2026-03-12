@@ -5,7 +5,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +186,54 @@ class ASFProjectManager:
             "name": name, 
             "path": project_path,
             "category": category,
-            "level": level
+            "level": level,
+            "archived": False,
+            "archived_at": None,
+            "archived_reason": None
         })
         self._save_registry(registry)
         return manifest
+
+    def archive_project(self, project_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
+        """Archive a project (soft delete)."""
+        registry = self._load_registry()
+        project = None
+        for p in registry.get("projects", []):
+            if p.get("id") == project_id:
+                project = p
+                break
+        
+        if not project:
+            raise Exception(f"Project '{project_id}' not found")
+        
+        if project.get("archived"):
+            raise Exception(f"Project '{project_id}' is already archived")
+        
+        project["archived"] = True
+        project["archived_at"] = datetime.now().isoformat()
+        project["archived_reason"] = reason
+        
+        self._save_registry(registry)
+        return project
+
+    def unarchive_project(self, project_id: str) -> Dict[str, Any]:
+        """Unarchive a project (restore)."""
+        registry = self._load_registry()
+        project = None
+        for p in registry.get("projects", []):
+            if p.get("id") == project_id:
+                project = p
+                break
+        
+        if not project:
+            raise Exception(f"Project '{project_id}' not found")
+        
+        if not project.get("archived"):
+            raise Exception(f"Project '{project_id}' is not archived")
+        
+        project["archived"] = False
+        project["archived_at"] = None
+        project["archived_reason"] = None
+        
+        self._save_registry(registry)
+        return project

@@ -169,6 +169,50 @@ async def launch_project(project_id: str, req: dict, background_tasks: Backgroun
     background_tasks.add_task(run_factory_task, project_id, manifest)
     return {"status": "success"}
 
+@router.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    """Delete a project (hard delete - removes project directory)."""
+    p_dir = mgr.projects_dir or os.path.join(get_project_root(), "projects")
+    p_path = os.path.join(p_dir, project_id)
+    
+    if not os.path.exists(p_path):
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+    
+    try:
+        import shutil
+        shutil.rmtree(p_path)
+        
+        registry_path = os.path.join(p_dir, "registry.json")
+        if os.path.exists(registry_path):
+            with open(registry_path, 'r') as f:
+                registry = json.load(f)
+            registry["projects"] = [p for p in registry.get("projects", []) if p.get("id") != project_id]
+            with open(registry_path, 'w', encoding='utf-8') as f:
+                json.dump(registry, f, indent=4, ensure_ascii=False)
+        
+        return {"status": "success", "message": f"Project '{project_id}' deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
+
+@router.post("/projects/{project_id}/archive")
+async def archive_project(project_id: str, req: dict = {}):
+    """Archive a project (soft delete)."""
+    reason = req.get("reason") if req else None
+    try:
+        project = mgr.archive_project(project_id, reason)
+        return {"status": "success", "project": project}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/projects/{project_id}/unarchive")
+async def unarchive_project(project_id: str):
+    """Unarchive a project (restore)."""
+    try:
+        project = mgr.unarchive_project(project_id)
+        return {"status": "success", "project": project}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.get("/projects/{project_id}/events/take")
 async def take_project_events(project_id: str):
     """Fetch and clear events for a project (for Workstation polling)."""
