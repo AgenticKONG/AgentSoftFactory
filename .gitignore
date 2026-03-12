@@ -26,26 +26,18 @@ config.json
 !.env.template
 secrets/
 
-# --- LOCAL DOCUMENTATION ---
-/docs/
-
-# --- ASF PRIVATE INFRASTRUCTURE (ERIC'S STEALTH MODE) ---
+# --- LOCAL DOCUMENTATION (PRIVATE)---
 # These contain local paths and private logic
+/docs/
 /scripts/
 /logs/
 /copaw-data/
 /data/
-/projects/test-soul-bridge/
+/projects/
 
 # --- SOUL & STRATEGY (PRIVATE) ---
-GEMINI.md
 ASF_ENGINEERING_LOG.md
 SOUL.md
-AGENTS.md
-CLAUDE.md
-
-# --- PUBLIC FACING (DO NOT IGNORE) ---
-# CHANGELOG.md is allowed for public summary
 
 # --- PYTHON & SYSTEM ---
 __pycache__/
@@ -77,15 +69,14 @@ yarn-error.log*
 openapi-ts*.log
 *.log
 
-<<<<<<< HEAD
-# vibe coding
+
+# VIBE CODING
 .claude
 openspec
 /AGENTS.md
 CLAUDE.md
 GEMINI.md
-=======
+
 # Temporary
->>>>>>> 29ea286 (feat: implement Soul Bridge v2.0 and enhance communication UI)
 *.tmp
 *.bak
